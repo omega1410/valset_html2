@@ -395,3 +395,20 @@ div[style*="position: fixed"][style*="background-color: rgba"],
 .animate-flash-random {
   animation: flash-random 8s infinite;
 }
+
+header {
+  z-index: 20 !important;
+  position: sticky !important;
+}
+
+/* Ограничиваем эффекты только hero-секцией */
+#hero-section {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Убеждаемся, что эффекты не вылезают за пределы hero-секции */
+#hero-section .absolute {
+  max-width: 100%;
+  overflow: hidden;
+}
