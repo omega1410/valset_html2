@@ -272,6 +272,32 @@ def init_db():
                 )
             """)
 
+            # Индексы для оптимизации
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_checklist_progress_user ON checklist_progress(user_id)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_checklist_progress_shift ON checklist_progress(shift_type)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_logbook_author ON logbook(author_id)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_logbook_status ON logbook(status)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_test_stats_user ON test_stats(user_id)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_news_created ON news(created_at DESC)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, created_at)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_members_user ON conversation_members(user_id)"
+            )
+
         conn.commit()
 
 

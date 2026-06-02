@@ -102,40 +102,28 @@ async def toggle_task(
     shift_type: str, task: TaskToggle, user: dict = Depends(get_current_user)
 ):
     """Переключить статус задачи и проверить на полное выполнение"""
-    # Проверяем, существует ли задача
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id FROM checklist_tasks WHERE id = ? AND shift_type = ?",
-            (task.task_id, shift_type),
-        )
-        if not cursor.fetchone():
-            raise HTTPException(404, "Задача не найдена")
 
-    # Обновляем статус задачи
     with get_db_connection() as conn:
         cursor = conn.cursor()
+
+        # 1. Обновляем статус задачи
         cursor.execute(
             """
             INSERT OR REPLACE INTO checklist_progress (user_id, shift_type, task_id, is_done, updated_at)
             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """,
+            """,
             (user["id"], shift_type, task.task_id, task.is_done),
         )
 
-    # Проверяем, все ли задачи выполнены
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+        # 2. ОДНИМ ЗАПРОСОМ проверяем, все ли задачи выполнены
         cursor.execute(
             """
-            SELECT COUNT(*) as total, 
-                   SUM(CASE WHEN cp.is_done = 1 THEN 1 ELSE 0 END) as completed
-            FROM checklist_tasks ct
-            LEFT JOIN checklist_progress cp ON ct.id = cp.task_id 
-                AND cp.user_id = ? AND cp.shift_type = ?
-            WHERE ct.shift_type = ?
-        """,
-            (user["id"], shift_type, shift_type),
+            SELECT 
+                (SELECT COUNT(*) FROM checklist_tasks WHERE shift_type = ?) as total,
+                (SELECT COUNT(*) FROM checklist_progress 
+                 WHERE user_id = ? AND shift_type = ? AND is_done = 1) as completed
+            """,
+            (shift_type, user["id"], shift_type),
         )
         stats = cursor.fetchone()
 
@@ -143,29 +131,24 @@ async def toggle_task(
         completed = stats["completed"] if stats else 0
         all_completed = completed == total and total > 0
 
-        # Если все задачи выполнены, сбрасываем прогресс
+        # 3. Если все выполнены - сбрасываем и начисляем очко
         if all_completed:
+            # Сбрасываем прогресс
             cursor.execute(
-                """
-                DELETE FROM checklist_progress WHERE user_id = ? AND shift_type = ?
-            """,
+                "DELETE FROM checklist_progress WHERE user_id = ? AND shift_type = ?",
                 (user["id"], shift_type),
             )
 
-            # Обновляем статистику в test_stats (добавляем выполненный чек-лист)
-            # Для этого используем отдельную запись в test_stats с section_id = 0 (чек-листы)
+            # Начисляем очко в статистику
             cursor.execute(
                 """
-                INSERT OR REPLACE INTO test_stats (user_id, section_id, correct_answers, total_questions)
-                VALUES (?, 0, COALESCE(
-                    (SELECT correct_answers + 1 FROM test_stats WHERE user_id = ? AND section_id = 0), 
-                    1
-                ), COALESCE(
-                    (SELECT total_questions + 1 FROM test_stats WHERE user_id = ? AND section_id = 0),
-                    1
-                ))
-            """,
-                (user["id"], user["id"], user["id"]),
+                INSERT INTO test_stats (user_id, section_id, correct_answers, total_questions)
+                VALUES (?, 0, 1, 1)
+                ON CONFLICT(user_id, section_id) DO UPDATE SET
+                    correct_answers = correct_answers + 1,
+                    total_questions = total_questions + 1
+                """,
+                (user["id"],),
             )
 
             return {

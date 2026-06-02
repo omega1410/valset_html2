@@ -164,6 +164,7 @@ async def add_question_to_test(
         else:
             order_num = q.order_num
 
+        # УБРАЛИ section_id из запроса!
         cursor.execute(
             """
             INSERT INTO test_questions (test_id, question, option1, option2, option3, correct_index, order_num)

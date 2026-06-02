@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import os
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Инициализация базы данных...")
     init_db()
-    logger.info("Инициализация FTS5 для морфологического поиска...")
+    logger.info("Инициализация FTS5...")
     init_fts()
     logger.info("Готово!")
     yield
@@ -46,32 +47,27 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS для разработки
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Подключаем статику (фото)
-assets_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets"
-)
+# Пути для статики (работает локально)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+assets_path = os.path.join(BASE_DIR, "assets")
+avatars_path = os.path.join(os.path.dirname(__file__), "avatars")
+
 if os.path.exists(assets_path):
     app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
 
-avatars_path = os.path.join(os.path.dirname(__file__), "avatars")
-if not os.path.exists(avatars_path):
-    os.makedirs(avatars_path, exist_ok=True)
+os.makedirs(avatars_path, exist_ok=True)
 app.mount("/avatars", StaticFiles(directory=avatars_path), name="avatars")
-print(f"Аватары загружаются из: {avatars_path}")
 
-# Регистрируем роутеры
+# Роутеры (без изменений)
 app.include_router(auth.router, prefix="/api/auth", tags=["Авторизация"])
 app.include_router(sections.router, prefix="/api/sections", tags=["Разделы"])
 app.include_router(files.router, prefix="/api/files", tags=["Файлы"])
@@ -92,6 +88,8 @@ app.include_router(news.router, prefix="/api/news", tags=["Новости"])
 app.include_router(admin_news.router, prefix="/api/admin", tags=["Admin - Новости"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Статистика"])
 app.include_router(feedback.router, prefix="/api/feedback", tags=["Обратная связь"])
+
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
 @app.get("/")

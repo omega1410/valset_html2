@@ -1,12 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import os
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.auth import get_current_user
 from app.utils.yandex_gpt import generate_rag_answer, generate_free_answer
 
 router = APIRouter()
+
+# Настройка лимитера
+limiter = Limiter(key_func=get_remote_address)
 
 
 class Question(BaseModel):
@@ -24,7 +30,9 @@ chat_sessions: Dict[int, List[ChatMessage]] = {}
 
 
 @router.post("/chat")
-async def chat(question: Question, user: dict = Depends(get_current_user)):
+async def chat(
+    question: Question, request: Request, user: dict = Depends(get_current_user)
+):
     """Общение с AI-помощником"""
     user_id = user["id"]
 
