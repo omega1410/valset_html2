@@ -243,3 +243,155 @@ div[style*="position: fixed"][style*="background-color: rgba"],
     transform: translateY(-5px);
   }
 }
+
+/* 3D эффект для карточек */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-3d:hover {
+  transform: perspective(1000px) rotateX(5deg) rotateY(5deg) translateZ(10px);
+  box-shadow: 0 20px 30px -15px rgba(0, 0, 0, 0.3);
+}
+
+/* Анимированный прогресс-бар с волной */
+@keyframes wave {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.progress-wave {
+  background: linear-gradient(90deg, #2563eb, #60a5fa, #3b82f6, #2563eb);
+  background-size: 200% auto;
+  animation: wave 1.5s linear infinite;
+  border-radius: 9999px;
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+/* ========== ПОГОДНЫЕ ЭФФЕКТЫ ========== */
+
+/* Солнце — пульсация */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+/* Солнце — лучи */
+@keyframes ping {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 2.5s ease-out infinite;
+}
+
+/* Облака — движение */
+@keyframes float-slow {
+  0% {
+    transform: translateX(-50px);
+  }
+
+  100% {
+    transform: translateX(50px);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 22s ease-in-out infinite alternate;
+}
+
+.animate-float-medium {
+  animation: float-slow 16s ease-in-out infinite alternate-reverse;
+}
+
+.animate-float-fast {
+  animation: float-slow 11s ease-in-out infinite alternate;
+}
+
+/* Дождь */
+@keyframes rain {
+  0% {
+    transform: translateY(-30px) translateX(0);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translateY(calc(100vh + 30px)) translateX(15px);
+    opacity: 0;
+  }
+}
+
+.animate-rain {
+  animation: rain linear infinite;
+  font-size: 1rem;
+  will-change: transform;
+}
+
+/* Снег */
+@keyframes snow {
+  0% {
+    transform: translateY(-30px) rotate(0deg);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translateY(calc(100vh + 30px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-snow {
+  animation: snow linear infinite;
+  font-size: 1rem;
+  will-change: transform;
+}
+
+/* Гроза — вспышка */
+@keyframes flash-random {
+
+  0%,
+  85%,
+  100% {
+    opacity: 0;
+  }
+
+  90% {
+    opacity: 0.9;
+  }
+
+  95% {
+    opacity: 0.3;
+  }
+}
+
+.animate-flash-random {
+  animation: flash-random 8s infinite;
+}

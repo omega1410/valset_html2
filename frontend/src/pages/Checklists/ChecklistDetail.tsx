@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { checklistsService } from '../../services/checklistsService';
 import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';  // 👈 ДОБАВИТЬ ИМПОРТ
 
 export const ChecklistDetail = () => {
   const { type } = useParams();
@@ -31,8 +32,26 @@ export const ChecklistDetail = () => {
       await loadChecklist();
       
       if (response.reset) {
-        toast.success('🎉 Все задачи выполнены! Чек-лист сброшен. Статистика обновлена!', {
+        // 🎉 КОНФЕТТИ ЗА ВЫПОЛНЕНИЕ ВСЕХ ЗАДАЧ 🎉
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0']
+        });
+        
+        setTimeout(() => {
+          confetti({
+            particleCount: 80,
+            spread: 100,
+            origin: { y: 0.5, x: 0.5 },
+            colors: ['#f59e0b', '#fbbf24']
+          });
+        }, 250);
+        
+        toast.success('🎉 Поздравляем! Чек-лист выполнен!', {
           duration: 5000,
+          icon: '✅'
         });
       } else {
         toast.success(isDone ? 'Задача отмечена как невыполненная' : 'Задача выполнена');

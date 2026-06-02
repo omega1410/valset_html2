@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { checklistsService } from '../../services/checklistsService';
+import { CardSkeleton } from '../../components/SkeletonLoader';  // 👈 ДОБАВИТЬ ИМПОРТ
 
 export const ChecklistsList = () => {
   const [types, setTypes] = useState([]);
@@ -21,10 +22,6 @@ export const ChecklistsList = () => {
     }
   };
 
-  if (loading) {
-    return <div className="text-center py-12 text-slate-500 dark:text-slate-400">Загрузка...</div>;
-  }
-
   const getIcon = (type: string) => {
     return type === 'day' ? '🌞' : '🌙';
   };
@@ -42,19 +39,34 @@ export const ChecklistsList = () => {
         <p className="page-subtitle">Чек-листы для дневной и ночной смены</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {types.map((item: any) => (
-          <Link
-            key={item.type}
-            to={`/checklists/${item.type}`}
-            className={`block rounded-xl border p-6 hover:shadow-md transition ${getBgClass(item.type)}`}
-          >
-            <div className="text-4xl mb-3">{getIcon(item.type)}</div>
-            <h3 className="text-xl font-semibold text-slate-800 dark:text-white">{item.name}</h3>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">{item.tasks_count} задач</p>
-          </Link>
-        ))}
-      </div>
+      {loading ? (
+        // ПОКАЗЫВАЕМ 2 СКЕЛЕТОНА (так как чек-листов всегда 2: день и ночь)
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {[1, 2].map((i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+      ) : types.length === 0 ? (
+        // ЕСЛИ НЕТ ЧЕК-ЛИСТОВ
+        <div className="card p-12 text-center">
+          <p className="text-slate-500 dark:text-slate-400">Нет доступных чек-листов</p>
+        </div>
+      ) : (
+        // ПОКАЗЫВАЕМ ЧЕК-ЛИСТЫ
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {types.map((item: any) => (
+            <Link
+              key={item.type}
+              to={`/checklists/${item.type}`}
+              className={`block rounded-xl border p-6 hover:shadow-md transition ${getBgClass(item.type)}`}
+            >
+              <div className="text-4xl mb-3">{getIcon(item.type)}</div>
+              <h3 className="text-xl font-semibold text-slate-800 dark:text-white">{item.name}</h3>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">{item.tasks_count} задач</p>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

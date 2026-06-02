@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { filesService } from '../../services/filesService';
 import toast from 'react-hot-toast';
+import { SkeletonLoader } from '../../components/SkeletonLoader';
 
 export const FilesList = () => {
   const [files, setFiles] = useState<any[]>([]);
@@ -109,7 +110,9 @@ export const FilesList = () => {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-slate-500 dark:text-slate-400">Загрузка...</div>
+        <div className="card p-6">
+          <SkeletonLoader />
+        </div>
       ) : filteredFiles.length === 0 ? (
         <div className="card p-12 text-center">
           <p className="text-slate-500 dark:text-slate-400">

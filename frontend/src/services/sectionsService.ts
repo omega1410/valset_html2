@@ -6,13 +6,14 @@ export const sectionsService = {
     return response.data;
   },
   
-  getSection: async (id) => {
+  getSection: async (id: number) => {
     const response = await api.get(`/sections/${id}`);
     return response.data;
   },
   
-  searchSections: async (query) => {
+  searchSections: async (query: string) => {
+    if (!query || query.length < 2) return []; // 👈 Добавить проверку
     const response = await api.get(`/sections/search?q=${encodeURIComponent(query)}`);
-    return response.data;
+    return response.data; // API возвращает массив
   },
 };

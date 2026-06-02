@@ -121,19 +121,19 @@ export const Logbook = () => {
     try {
       if (editingEntry) {
         await logbookService.update(editingEntry.id, {
-          room_number: formRoom || null,
+          room_number: formRoom || undefined,
           task: formTask,
-          assignee: formAssignee || null,
-          comment: formComment || null,
+          assignee: formAssignee || undefined,
+          comment: formComment || undefined,
           is_important: formImportant,
         });
         toast.success('Запись обновлена');
       } else {
         await logbookService.create({
-          room_number: formRoom || null,
+          room_number: formRoom || undefined,
           task: formTask,
-          assignee: formAssignee || null,
-          comment: formComment || null,
+          assignee: formAssignee || undefined,
+          comment: formComment || undefined,
           is_important: formImportant,
         });
         toast.success('Запись создана');

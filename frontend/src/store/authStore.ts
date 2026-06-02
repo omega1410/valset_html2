@@ -30,7 +30,6 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isAdmin: false,
       setAuth: (token, user) => {
-        console.log('Saving to store:', user);
         localStorage.setItem('token', token);
         set({ token, user, isAuthenticated: true, isAdmin: user.role === 'admin' });
       },

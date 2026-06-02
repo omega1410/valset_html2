@@ -47,7 +47,7 @@ export const NewsFeed = () => {
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200">
-      <div className="max-h-[447px] overflow-y-auto">
+      <div className="max-h-[502px] overflow-y-auto">
         {news.map((item: any) => (
           <div key={item.id} className="p-4 border-b border-slate-100 dark:border-slate-700 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors duration-150">
             <div className="flex justify-between items-start mb-2">

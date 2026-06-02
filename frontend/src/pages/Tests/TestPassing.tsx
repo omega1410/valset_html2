@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { testsService } from '../../services/testsService';
 import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
 
 export const TestPassing = () => {
   const { id } = useParams();
@@ -49,22 +50,59 @@ export const TestPassing = () => {
   };
 
   const submitTest = async () => {
-    if (answers.includes(-1)) {
-      toast.error('Ответьте на все вопросы');
-      return;
-    }
+  if (answers.includes(-1)) {
+    toast.error('Ответьте на все вопросы');
+    return;
+  }
 
-    try {
-      const data = await testsService.submitTest(Number(id), answers);
-      setResult(data);
-      setSubmitted(true);
-      toast.success('Тест завершён');
-    } catch (error: any) {
-      console.error('Ошибка:', error);
-      const errorMessage = error.response?.data?.detail || 'Ошибка при сохранении результатов';
-      toast.error(errorMessage);
+  try {
+    const data = await testsService.submitTest(Number(id), answers);
+    setResult(data);
+    setSubmitted(true);
+    
+    // 🎉 ЗАПУСКАЕМ КОНФЕТТИ ПРИ УСПЕШНОМ ПРОХОЖДЕНИИ 🎉
+    if (data.passed) {
+      // Основной залп
+      confetti({
+        particleCount: 200,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd']
+      });
+      
+      // Второй залп через 200мс
+      setTimeout(() => {
+        confetti({
+          particleCount: 100,
+          spread: 100,
+          origin: { y: 0.5, x: 0.3 },
+          colors: ['#10b981', '#34d399', '#6ee7b7']
+        });
+      }, 200);
+      
+      // Третий залп через 400мс
+      setTimeout(() => {
+        confetti({
+          particleCount: 100,
+          spread: 100,
+          origin: { y: 0.5, x: 0.7 },
+          colors: ['#f59e0b', '#fbbf24', '#fcd34d']
+        });
+      }, 400);
+      
+      toast.success('🎉 Поздравляем! Тест пройден!', {
+        duration: 5000,
+        icon: '🏆'
+      });
+    } else {
+      toast.error('Тест не пройден. Попробуйте ещё раз!');
     }
-  };
+    
+  } catch (error: any) {
+    console.error('Ошибка:', error);
+    toast.error(error.response?.data?.detail || 'Ошибка при сохранении результатов');
+  }
+};
 
   if (loading) {
     return <div className="text-center py-12 text-slate-500 dark:text-slate-400">Загрузка...</div>;

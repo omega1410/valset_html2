@@ -1,48 +1,28 @@
-import { useEffect, useState } from 'react';
-import { sectionsService } from '../../services/sectionsService';
+import { useState } from 'react';
+import { useSections, useSearchSections } from '../../hooks/useSections';
 import { SearchBar } from '../../components/Sections/SearchBar';
 import { SectionCard } from '../../components/Sections/SectionCard';
+import { CardSkeleton } from '../../components/SkeletonLoader';
 
 export const SectionsList = () => {
-  const [sections, setSections] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState(null);
+  const [page] = useState(1);
+  
+  // Обычные разделы
+  const { data: sectionsData, isLoading: sectionsLoading } = useSections(page);
+  // Поиск
+  const { data: searchResults, isLoading: searchLoading, isFetching } = useSearchSections(searchQuery);
+  
+  const isLoading = searchQuery ? searchLoading : sectionsLoading;
+  
+  // БЕЗОПАСНО получаем массив разделов - проверяем что данные существуют
+  const displayedSections = searchQuery 
+    ? (searchResults || [])  // 👈 Если searchResults undefined - пустой массив
+    : (sectionsData?.items || []); // 👈 Если sectionsData undefined - пустой массив
 
-  useEffect(() => {
-    loadSections();
-  }, []);
-
-  const loadSections = async () => {
-    setLoading(true);
-    try {
-      const data = await sectionsService.getSections();
-      setSections(data.items || []);
-    } catch (error) {
-      console.error('Ошибка загрузки разделов:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleClear = () => {
+    setSearchQuery('');
   };
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setSearchResults(null);
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const results = await sectionsService.searchSections(searchQuery);
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Ошибка поиска:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const displayedSections = searchResults !== null ? searchResults : sections;
 
   return (
     <div className="page-container">
@@ -54,26 +34,41 @@ export const SectionsList = () => {
       <SearchBar 
         value={searchQuery}
         onChange={setSearchQuery}
-        onSearch={handleSearch}
-        onClear={() => {
-          setSearchQuery('');
-          setSearchResults(null);
-        }}
+        onSearch={() => {}} // поиск автоматический при изменении
+        onClear={handleClear}
       />
 
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <CardSkeleton key={i} />
+          ))}
         </div>
       ) : displayedSections.length === 0 ? (
         <div className="card p-12 text-center">
-          <p className="text-slate-500 dark:text-slate-400">Ничего не найдено</p>
+          <p className="text-slate-500 dark:text-slate-400">
+            {searchQuery ? 'Ничего не найдено' : 'Нет разделов'}
+          </p>
+          {searchQuery && (
+            <button
+              onClick={handleClear}
+              className="mt-3 text-sm text-blue-600 hover:text-blue-700"
+            >
+              Очистить поиск
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {displayedSections.map((section) => (
+          {displayedSections.map((section: any) => (
             <SectionCard key={section.id} section={section} />
           ))}
+        </div>
+      )}
+      
+      {isFetching && searchQuery && (
+        <div className="text-center text-sm text-slate-400 animate-pulse">
+          Поиск...
         </div>
       )}
     </div>

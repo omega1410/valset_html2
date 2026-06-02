@@ -39,7 +39,6 @@ export const authService = {
     const response = await api.post('/auth/reset-password', null, { 
       params: { token, new_password: newPassword } 
     });
-    console.log('resetPassword response:', response); // 👈 ДОБАВЬТЕ
     return response.data;
   },
 };
