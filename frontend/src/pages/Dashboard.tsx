@@ -164,7 +164,7 @@ export const Dashboard = () => {
         style={{ backgroundImage: 'radial-gradient(circle farthest-corner at 10% 20%, rgba(0,51,102,1) 0%, rgba(0,102,204,1) 49.5%, rgba(0,191,255,1) 90%)' }}
       >
         {/* Погодные эффекты видны только когда hero в зоне видимости */}
-        {isHeroVisible && weatherMain && <WeatherEffects weatherMain={weatherMain} />}
+        {isHeroVisible && weatherMain && <WeatherEffects weatherMain={weatherMain} isVisible={isHeroVisible} />}
         
         <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
