@@ -1,0 +1,11 @@
+--2026-06-03 18:35:38--  https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp
+Resolving www.gravatar.com (www.gravatar.com)... 192.0.73.2, 2a04:fa87:fffe::c000:4902
+Connecting to www.gravatar.com (www.gravatar.com)|192.0.73.2|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 1262 (1.2K) [image/jpeg]
+Saving to: ‘/var/www/hotel-assistant/backend/avatars/user_2.jpg’
+
+          /var/www/   0%[                    ]       0  --.-KB/s               /var/www/hotel-assi 100%[===================>]   1.23K  --.-KB/s    in 0s      
+
+2026-06-03 18:35:39 (50.3 MB/s) - ‘/var/www/hotel-assistant/backend/avatars/user_2.jpg’ saved [1262/1262]
+

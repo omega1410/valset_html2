@@ -1,0 +1,414 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 transition-all duration-200;
+  }
+
+  .module-card {
+    @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-md transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600;
+  }
+
+  .stats-card {
+    @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 transition-all duration-200;
+  }
+
+  .stat-item {
+    @apply text-center p-3 rounded-lg transition-all duration-200 hover:scale-105;
+  }
+
+  .divider {
+    @apply border-t border-slate-200 dark:border-slate-700;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold transition-colors duration-200;
+  }
+
+  .stat-label {
+    @apply text-xs mt-1 transition-colors duration-200;
+  }
+
+  .page-container {
+    @apply space-y-6;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold text-slate-800 dark:text-white transition-colors duration-200;
+  }
+
+  .page-subtitle {
+    @apply text-slate-500 dark:text-slate-400 mt-1 transition-colors duration-200;
+  }
+
+  .table-container {
+    @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200;
+  }
+
+  .table-header {
+    @apply bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 transition-all duration-200;
+  }
+
+  .table-header-cell {
+    @apply text-left px-6 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 transition-colors duration-200;
+  }
+
+  .table-row {
+    @apply border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all duration-200;
+  }
+
+  .table-cell {
+    @apply px-6 py-3 text-sm transition-colors duration-200;
+  }
+
+  .modal-container {
+    @apply bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto transition-all duration-200;
+    position: relative;
+    z-index: 10000;
+  }
+
+  .modal-title {
+    @apply text-xl font-semibold text-slate-800 dark:text-white mb-4 transition-colors duration-200;
+  }
+
+  .form-input {
+    @apply w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition dark:bg-slate-700 dark:text-white text-slate-900;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors duration-200;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all duration-200;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200;
+  }
+
+  .btn-outline {
+    @apply px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 text-slate-700 dark:text-slate-300;
+  }
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Блокировка скролла при открытом модальном окне */
+body.modal-open {
+  overflow: hidden;
+}
+
+body.modal-open header {
+  position: relative;
+  z-index: 0;
+  transform: translateZ(0);
+}
+
+.modal-overlay,
+div[style*="position: fixed"][style*="background-color: rgba"],
+.fixed.inset-0.bg-black.bg-opacity-50 {
+  margin-top: 0 !important;
+  top: 0 !important;
+  inset: 0 !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 3s ease infinite;
+}
+
+.animate-bounce {
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Остальные стили (градиент, bounce) */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 3s ease infinite;
+}
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* 3D эффект для карточек */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-3d:hover {
+  transform: perspective(1000px) rotateX(5deg) rotateY(5deg) translateZ(10px);
+  box-shadow: 0 20px 30px -15px rgba(0, 0, 0, 0.3);
+}
+
+/* Анимированный прогресс-бар с волной */
+@keyframes wave {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.progress-wave {
+  background: linear-gradient(90deg, #2563eb, #60a5fa, #3b82f6, #2563eb);
+  background-size: 200% auto;
+  animation: wave 1.5s linear infinite;
+  border-radius: 9999px;
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+/* ========== ПОГОДНЫЕ ЭФФЕКТЫ ========== */
+
+/* Солнце — пульсация */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+/* Солнце — лучи */
+@keyframes ping {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 2.5s ease-out infinite;
+}
+
+/* Облака — движение */
+@keyframes float-slow {
+  0% {
+    transform: translateX(-50px);
+  }
+
+  100% {
+    transform: translateX(50px);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 22s ease-in-out infinite alternate;
+}
+
+.animate-float-medium {
+  animation: float-slow 16s ease-in-out infinite alternate-reverse;
+}
+
+.animate-float-fast {
+  animation: float-slow 11s ease-in-out infinite alternate;
+}
+
+/* Дождь */
+@keyframes rain {
+  0% {
+    transform: translateY(-30px) translateX(0);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translateY(calc(100vh + 30px)) translateX(15px);
+    opacity: 0;
+  }
+}
+
+.animate-rain {
+  animation: rain linear infinite;
+  font-size: 1rem;
+  will-change: transform;
+}
+
+/* Снег */
+@keyframes snow {
+  0% {
+    transform: translateY(-30px) rotate(0deg);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translateY(calc(100vh + 30px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-snow {
+  animation: snow linear infinite;
+  font-size: 1rem;
+  will-change: transform;
+}
+
+/* Гроза — вспышка */
+@keyframes flash-random {
+
+  0%,
+  85%,
+  100% {
+    opacity: 0;
+  }
+
+  90% {
+    opacity: 0.9;
+  }
+
+  95% {
+    opacity: 0.3;
+  }
+}
+
+.animate-flash-random {
+  animation: flash-random 8s infinite;
+}
+
+header {
+  z-index: 20 !important;
+  position: sticky !important;
+}
+
+/* Ограничиваем эффекты только hero-секцией */
+#hero-section {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Убеждаемся, что эффекты не вылезают за пределы hero-секции */
+#hero-section .absolute {
+  max-width: 100%;
+  overflow: hidden;
+}
