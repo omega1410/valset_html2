@@ -83,7 +83,7 @@ export const SectionDetail = () => {
                 {photos.length > 1 && (
                   <button
                     onClick={prevPhoto}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition z-10"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition z-10"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -92,7 +92,7 @@ export const SectionDetail = () => {
                 )}
 
                 <img
-                  src={`http://localhost:8000/assets/${photos[currentPhotoIndex]}`}
+                  src={`/assets/${photos[currentPhotoIndex]}`}
                   alt={`Фото ${currentPhotoIndex + 1}`}
                   className="w-full object-contain max-h-96"
                   onError={(e) => {
@@ -103,7 +103,7 @@ export const SectionDetail = () => {
                 {photos.length > 1 && (
                   <button
                     onClick={nextPhoto}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition z-10"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition z-10"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

@@ -18,6 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { adminService } from '../../services/adminService';
 import { testsAdminService } from '../../services/testsAdminService';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 // Компонент для перетаскиваемой строки таблицы
@@ -98,6 +99,14 @@ export const AdminPanel = () => {
   const [newsTitle, setNewsTitle] = useState('');
   const [newsContent, setNewsContent] = useState('');
 
+  // Состояния для фидбэка
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [feedbackStats, setFeedbackStats] = useState(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [commentText, setCommentText] = useState('');
+
   // Drag-and-drop сенсоры
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -111,6 +120,13 @@ export const AdminPanel = () => {
   useEffect(() => {
     setOrderedSections(sections);
   }, [sections]);
+
+  // Загрузка фидбэка при переключении на вкладку
+  useEffect(() => {
+    if (activeTab === 'feedback') {
+      loadFeedback();
+    }
+  }, [activeTab]);
 
   const loadData = async () => {
     setLoading(true);
@@ -139,6 +155,65 @@ export const AdminPanel = () => {
       toast.error('Ошибка загрузки данных');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ============ ФУНКЦИИ ДЛЯ ФИДБЭКА ============
+  
+  const loadFeedback = async () => {
+    setFeedbackLoading(true);
+    try {
+      const [list, stats] = await Promise.all([
+        api.get('/feedback/admin/feedback').then(r => r.data),
+        api.get('/feedback/admin/feedback/stats/summary').then(r => r.data)
+      ]);
+      setFeedbackList(list);
+      setFeedbackStats(stats);
+    } catch (error) {
+      console.error('Error loading feedback:', error);
+      toast.error('Ошибка загрузки фидбэка');
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const updateFeedbackStatus = async (id: number, status: string) => {
+    try {
+      await api.put(`/feedback/admin/feedback/${id}`, { status });
+      toast.success('Статус обновлён');
+      loadFeedback();
+    } catch (error) {
+      toast.error('Ошибка обновления');
+    }
+  };
+
+  const openCommentModal = (feedback: any) => {
+    setSelectedFeedback(feedback);
+    setCommentText(feedback.admin_comment || '');
+    setShowCommentModal(true);
+  };
+
+  const saveComment = async () => {
+    if (!selectedFeedback) return;
+    try {
+      await api.put(`/feedback/admin/feedback/${selectedFeedback.id}`, { comment: commentText });
+      toast.success('Комментарий сохранён');
+      setShowCommentModal(false);
+      loadFeedback();
+    } catch (error) {
+      toast.error('Ошибка сохранения');
+    }
+  };
+
+  const deleteFeedback = async (id: number) => {
+    if (confirm('Удалить сообщение?')) {
+      try {
+        await api.delete(`/feedback/admin/feedback/${id}`);
+        toast.success('Сообщение удалено');
+        loadFeedback();
+      } catch (error) {
+        toast.error('Ошибка удаления');
+      }
     }
   };
 
@@ -621,9 +696,27 @@ export const AdminPanel = () => {
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} Б`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFeedbackTypeLabel = (type: string) => {
+    switch(type) {
+      case 'bug': return 'Баг';
+      case 'feature': return 'Предложение';
+      case 'question': return 'Вопрос';
+      default: return type;
+    }
+  };
+
+  const getFeedbackStatusLabel = (status: string) => {
+    switch(status) {
+      case 'new': return 'Новое';
+      case 'in_progress': return 'В работе';
+      case 'completed': return 'Завершено';
+      default: return status;
+    }
   };
 
   return (
@@ -694,6 +787,16 @@ export const AdminPanel = () => {
           }`}
         >
           Файлы
+        </button>
+        <button
+          onClick={() => setActiveTab('feedback')}
+          className={`px-4 py-2 font-medium transition ${
+            activeTab === 'feedback' 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          Фидбэк
         </button>
       </div>
 
@@ -906,7 +1009,7 @@ export const AdminPanel = () => {
                   )}
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-500 dark:text-slate-400">
-                      📝 {test.questions_count} вопросов
+                      📘 {test.questions_count} вопросов
                     </span>
                     {test.section_id && (
                       <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
@@ -965,14 +1068,14 @@ export const AdminPanel = () => {
                         }`}>
                           {task.shift_type === 'day' ? 'Дневная' : 'Ночная'}
                         </span>
-                       </td>
+                      </td>
                       <td className="table-cell text-slate-600 dark:text-slate-400">{task.task_order}</td>
                       <td className="table-cell text-slate-800 dark:text-white">{task.task_text}</td>
                       <td className="table-cell space-x-3">
                         <button onClick={() => openTaskModal(task)} className="text-blue-600 dark:text-blue-400">Ред.</button>
                         <button onClick={() => handleDeleteTask(task.id)} className="text-red-600 dark:text-red-400">Уд.</button>
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -1089,7 +1192,170 @@ export const AdminPanel = () => {
         </div>
       )}
 
-      {/* ============ МОДАЛКА ТЕСТА ============ */}
+      {/* ============ ФИДБЭК ============ */}
+      {activeTab === 'feedback' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-slate-800 dark:text-white">
+              Обратная связь
+            </h2>
+            <button
+              onClick={() => loadFeedback()}
+              className="px-3 py-1 text-sm bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200"
+            >
+              Обновить
+            </button>
+          </div>
+
+          {feedbackLoading ? (
+            <div className="text-center py-12">Загрузка...</div>
+          ) : feedbackList.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-slate-500">Нет сообщений</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Статистика */}
+              {feedbackStats && (
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  <div className="bg-blue-100 dark:bg-blue-800 rounded-lg p-3 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-200">{feedbackStats.total}</div>
+                    <div className="text-xs text-blue-600 dark:text-blue-300 font-medium">Всего</div>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-800 rounded-lg p-3 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-amber-700 dark:text-amber-200">{feedbackStats.by_status?.new || 0}</div>
+                    <div className="text-xs text-amber-600 dark:text-amber-300 font-medium">Новые</div>
+                  </div>
+                  <div className="bg-purple-100 dark:bg-purple-800 rounded-lg p-3 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-purple-700 dark:text-purple-200">{feedbackStats.by_status?.in_progress || 0}</div>
+                    <div className="text-xs text-purple-600 dark:text-purple-300 font-medium">В работе</div>
+                  </div>
+                  <div className="bg-emerald-100 dark:bg-emerald-800 rounded-lg p-3 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-200">{feedbackStats.by_status?.completed || 0}</div>
+                    <div className="text-xs text-emerald-600 dark:text-emerald-300 font-medium">Завершены</div>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-800 rounded-lg p-3 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-rose-700 dark:text-rose-200">{feedbackStats.by_type?.bug || 0}</div>
+                    <div className="text-xs text-rose-600 dark:text-rose-300 font-medium">Бaги</div>
+                  </div>
+                  <div className="bg-emerald-100 dark:bg-emerald-800 rounded-lg p-3 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-200">{feedbackStats.by_type?.feature || 0}</div>
+                    <div className="text-xs text-emerald-600 dark:text-emerald-300 font-medium">Предложения</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Список сообщений */}
+              <div className="space-y-3">
+                {feedbackList.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className={`card p-4 transition-all ${
+                      item.status === 'new' ? 'border-l-4 border-l-amber-500' : ''
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${
+                            item.type === 'bug' ? 'bg-red-100 text-red-700' :
+                            item.type === 'feature' ? 'bg-green-100 text-green-700' :
+                            'bg-blue-100 text-blue-700'
+                          }`}>
+                            {getFeedbackTypeLabel(item.type)}
+                          </span>
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${
+                            item.status === 'new' ? 'bg-amber-100 text-amber-700' :
+                            item.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
+                            'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {getFeedbackStatusLabel(item.status)}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-slate-800 dark:text-white mt-2">
+                          {item.subject}
+                        </h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                          {item.message}
+                        </p>
+                        {item.admin_comment && (
+                          <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-700/50 rounded text-sm">
+                            <span className="font-medium">Ответ админа:</span> {item.admin_comment}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-400 text-right shrink-0 ml-4">
+                        <div>От: {item.user_name}</div>
+                        <div>{item.user_email}</div>
+                        <div>{new Date(item.created_at).toLocaleString('ru-RU')}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                      <select
+                        value={item.status}
+                        onChange={(e) => updateFeedbackStatus(item.id, e.target.value)}
+                        className="text-sm px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-600 transition"
+                      >
+                        <option value="new" className="text-amber-600 dark:text-amber-400">Новое</option>
+                        <option value="in_progress" className="text-purple-600 dark:text-purple-400">В работе</option>
+                        <option value="completed" className="text-emerald-600 dark:text-emerald-400">Завершено</option>
+                      </select>
+                      <button
+                        onClick={() => openCommentModal(item)}
+                        className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800/50 transition font-medium"
+                      >
+                        Комментарий
+                      </button>
+                      <button
+                        onClick={() => deleteFeedback(item.id)}
+                        className="text-sm px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-800/50 transition font-medium"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Модальное окно для комментария */}
+          {showCommentModal && selectedFeedback && (
+            <>
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowCommentModal(false)} />
+              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-lg z-50 shadow-2xl">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Комментарий к сообщению</h3>
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  rows={4}
+                  placeholder="Введите комментарий..."
+                />
+                <div className="flex justify-end gap-3 mt-4">
+                  <button 
+                    onClick={() => setShowCommentModal(false)} 
+                    className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                  >
+                    Отмена
+                  </button>
+                  <button 
+                    onClick={saveComment} 
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Сохранить
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ============ МОДАЛЬНЫЕ ОКНА ============ */}
+      
+      {/* Модалка теста */}
       {showTestModal && (
         <>
           <div 
@@ -1195,7 +1461,7 @@ export const AdminPanel = () => {
         </>
       )}
 
-      {/* ============ МОДАЛКА РАЗДЕЛА ============ */}
+      {/* Модалка раздела */}
       {showModal && (
         <>
           <div 
@@ -1227,7 +1493,7 @@ export const AdminPanel = () => {
         </>
       )}
 
-      {/* ============ МОДАЛКА ФОТО ============ */}
+      {/* Модалка фото */}
       {showPhotoModal && selectedSection && (
         <>
           <div 
@@ -1247,7 +1513,7 @@ export const AdminPanel = () => {
               <div className="grid grid-cols-3 gap-3">
                 {sectionPhotos.map((photo: any) => (
                   <div key={photo.slot} className="relative group">
-                    <img src={`http://localhost:8000/assets/${photo.url}`} className="w-full h-32 object-cover rounded-lg" />
+                    <img src={`/assets/${photo.url}`} className="w-full h-32 object-cover rounded-lg" />
                     <button onClick={() => handleDeletePhoto(photo.slot)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100">✕</button>
                   </div>
                 ))}
@@ -1263,7 +1529,7 @@ export const AdminPanel = () => {
         </>
       )}
 
-      {/* ============ МОДАЛКА ЧЕК-ЛИСТА ============ */}
+      {/* Модалка чек-листа */}
       {showChecklistModal && (
         <>
           <div 
@@ -1309,7 +1575,7 @@ export const AdminPanel = () => {
         </>
       )}
 
-      {/* ============ МОДАЛКА НОВОСТИ ============ */}
+      {/* Модалка новости */}
       {showNewsModal && (
         <>
           <div 

@@ -18,7 +18,7 @@ export const Profile = () => {
       await authService.updateProfile({ 
         first_name: firstName, 
         last_name: lastName,
-        birthday: birthday || null
+        birthday: birthday || undefined
       });
       updateUser({ 
         first_name: firstName, 

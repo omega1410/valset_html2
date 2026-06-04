@@ -29,7 +29,6 @@ export const Dashboard = () => {
   const [confettiTriggered, setConfettiTriggered] = useState(false);
   
   const [weatherMain, setWeatherMain] = useState<string | null>(null);
-  const [testMode, setTestMode] = useState(false);
   const [isHeroVisible, setIsHeroVisible] = useState(true);
 
   const isBirthday = checkBirthday(user?.birthday);
@@ -63,17 +62,14 @@ export const Dashboard = () => {
     }
   }, [isBirthday, confettiTriggered]);
 
-  // 3-й useEffect — НОВЫЙ, для периодического обновления погоды
+  // 3-й useEffect — обновление погоды
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!testMode) {
-        fetchRealWeather();
-        console.log('🔄 Автообновление погоды для эффектов');
-      }
-    }, 5 * 60 * 1000);
+      fetchRealWeather();
+    }, 5 * 60 * 1000); // каждые 5 минут
 
     return () => clearInterval(interval);
-  }, [testMode]);
+  }, []);
 
   useEffect(() => {
     if (isBirthday && !confettiTriggered) {
@@ -107,15 +103,10 @@ export const Dashboard = () => {
       );
       if (!response.ok) return;
       const data = await response.json();
-      if (!testMode) setWeatherMain(data.weather[0].main);
+      setWeatherMain(data.weather[0].main);
     } catch (err) {
       console.warn('Не удалось получить реальную погоду для эффектов');
     }
-  };
-
-  const setTestWeather = (condition: string) => {
-    setTestMode(true);
-    setWeatherMain(condition);
   };
 
   const modules = [
@@ -126,20 +117,56 @@ export const Dashboard = () => {
   ];
 
   const getScoreColor = (score: number) => {
-    if (score < 25) return 'text-red-600 dark:text-red-400';
-    if (score < 50) return 'text-orange-600 dark:text-orange-400';
-    if (score < 70) return 'text-yellow-600 dark:text-yellow-400';
-    if (score < 85) return 'text-lime-600 dark:text-lime-400';
-    return 'text-emerald-600 dark:text-emerald-400';
+    if (score < 25) return 'text-red-700 dark:text-red-200';
+    if (score < 50) return 'text-orange-700 dark:text-orange-200';
+    if (score < 70) return 'text-yellow-700 dark:text-yellow-200';
+    if (score < 85) return 'text-lime-700 dark:text-lime-200';
+    return 'text-emerald-700 dark:text-emerald-200';
   };
 
   const statItems = [
-    { key: 'tests_passed', label: 'Тестов пройдено', suffix: '', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-    { key: 'avg_score', label: 'Средний балл', suffix: '%', adaptive: true, bg: 'bg-slate-50 dark:bg-slate-800/50' },
-    { key: 'completed_checklists', label: 'Чек-листов выполнено', suffix: '', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-    { key: 'viewed_sections', label: 'Разделов изучено', suffix: '', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-    { key: 'test_attempts', label: 'Попыток тестов', suffix: '', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/20' },
-    { key: 'weekly_activity', label: 'Записей за неделю', suffix: '', color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-900/20' },
+    { 
+      key: 'tests_passed', 
+      label: 'Тестов пройдено', 
+      suffix: '', 
+      color: 'text-blue-700 dark:text-blue-200', 
+      bg: 'bg-blue-100 dark:bg-blue-900/60' 
+    },
+    { 
+      key: 'avg_score', 
+      label: 'Средний балл', 
+      suffix: '%', 
+      adaptive: true, 
+      bg: 'bg-emerald-100 dark:bg-emerald-900/60' 
+    },
+    { 
+      key: 'completed_checklists', 
+      label: 'Чек-листов выполнено', 
+      suffix: '', 
+      color: 'text-purple-700 dark:text-purple-200', 
+      bg: 'bg-purple-100 dark:bg-purple-900/60' 
+    },
+    { 
+      key: 'viewed_sections', 
+      label: 'Разделов изучено', 
+      suffix: '', 
+      color: 'text-amber-700 dark:text-amber-200', 
+      bg: 'bg-amber-100 dark:bg-amber-900/60' 
+    },
+    { 
+      key: 'test_attempts', 
+      label: 'Попыток тестов', 
+      suffix: '', 
+      color: 'text-rose-700 dark:text-rose-200', 
+      bg: 'bg-rose-100 dark:bg-rose-900/60' 
+    },
+    { 
+      key: 'weekly_activity', 
+      label: 'Записей за неделю', 
+      suffix: '', 
+      color: 'text-cyan-700 dark:text-cyan-200', 
+      bg: 'bg-cyan-100 dark:bg-cyan-900/60' 
+    },
   ];
 
   return (
@@ -192,7 +219,9 @@ export const Dashboard = () => {
             )}
           </div>
           
-          <WeatherWidget />
+          <div>
+            <WeatherWidget />
+          </div>
         </div>
       </div>
 
@@ -216,7 +245,10 @@ export const Dashboard = () => {
 
           {!loading && stats?.personal && (
             <div className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-md border border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Моя статистика</h3>
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                Моя статистика
+              </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {statItems.map((item) => {
                   const value = stats.personal[item.key];
@@ -236,16 +268,25 @@ export const Dashboard = () => {
           {isAdmin && stats?.admin && (
             <div className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-md border border-slate-200 dark:border-slate-700">
               <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <span className="text-xl">📊</span> Статистика отеля
+                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                Статистика отеля
               </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
-                  <div className="text-xl font-bold text-blue-700 dark:text-blue-400">{stats.admin.total_users || 0}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">Сотрудников</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-blue-100 dark:bg-blue-900/60 rounded-lg p-3 text-center shadow-sm">
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-200">
+                    {stats.admin.total_users || 0}
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-300 font-medium mt-1">
+                    Сотрудников
+                  </div>
                 </div>
-                <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 text-center">
-                  <div className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{stats.admin.total_tests_all || 0}</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">Всего тестов</div>
+                <div className="bg-emerald-100 dark:bg-emerald-900/60 rounded-lg p-3 text-center shadow-sm">
+                  <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-200">
+                    {stats.admin.total_tests_all || 0}
+                  </div>
+                  <div className="text-xs text-emerald-600 dark:text-emerald-300 font-medium mt-1">
+                    Всего тестов
+                  </div>
                 </div>
               </div>
             </div>

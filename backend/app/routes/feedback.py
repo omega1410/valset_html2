@@ -1,107 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
-from dotenv import load_dotenv
-import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import logging
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_admin
 from app.database import get_db_connection
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class FeedbackCreate(BaseModel):
     subject: str
     message: str
-    type: str = "bug"  # bug, feature, question, other
+    type: str = "bug"
 
 
-class FeedbackResponse(BaseModel):
-    id: int
-    user_id: int
-    user_name: str
-    user_email: str
-    subject: str
-    message: str
-    type: str
-    status: str
-    created_at: str
-
-
-env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-load_dotenv(env_path)
-
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.yandex.ru")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-
-print(f"Загружено: SMTP_USER={SMTP_USER}")
-
-
-def send_feedback_email(
-    subject: str, message: str, user_name: str, user_email: str, feedback_type: str
-):
-    """Отправляет уведомление администратору"""
-    if not SMTP_USER or not SMTP_PASSWORD:
-        print(f"⚠️ Email не настроен. Фидбек от {user_name}: {subject}")
-        return
-
-    type_emoji = {"bug": "🐛", "feature": "💡", "question": "❓", "other": "📝"}
-
-    body = f"""
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="UTF-8"></head>
-    <body style="font-family: Arial, sans-serif;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #1e293b;">Новое сообщение от пользователя</h2>
-            
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Тип:</strong></td>
-                    <td style="padding: 8px 0;">{type_emoji.get(feedback_type, '📝')} {feedback_type}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>От:</strong></td>
-                    <td style="padding: 8px 0;">{user_name} ({user_email})</td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Тема:</strong></td>
-                    <td style="padding: 8px 0;">{subject}</td>
-                </tr>
-            </table>
-            
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <strong>Сообщение:</strong>
-                <p style="margin-top: 10px; white-space: pre-wrap;">{message}</p>
-            </div>
-            
-            <hr style="margin: 20px 0;">
-            <p style="color: #64748b; font-size: 12px;">Отправлено из системы Hotel Assistant</p>
-        </div>
-    </body>
-    </html>
-    """
-
-    msg = MIMEMultipart()
-    msg["From"] = SMTP_USER
-    msg["To"] = SMTP_USER  # Отправляем администратору
-    msg["Subject"] = f"[Hotel Assistant] {subject}"
-    msg.attach(MIMEText(body, "html"))
-
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.send_message(msg)
-        print(f"✅ Фидбек отправлен на email")
-    except Exception as e:
-        print(f"❌ Ошибка отправки email: {e}")
+class FeedbackUpdate(BaseModel):
+    status: Optional[str] = None
+    comment: Optional[str] = None
 
 
 @router.post("/feedback")
@@ -109,82 +26,185 @@ async def create_feedback(
     feedback: FeedbackCreate, user: dict = Depends(get_current_user)
 ):
     """Отправить обратную связь"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
 
-        # Создаём таблицу если нет
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS feedback (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                user_name TEXT NOT NULL,
-                user_email TEXT NOT NULL,
-                subject TEXT NOT NULL,
-                message TEXT NOT NULL,
-                type TEXT DEFAULT 'bug',
-                status TEXT DEFAULT 'new',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+            # Создаём таблицу если нет
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    user_name TEXT NOT NULL,
+                    user_email TEXT NOT NULL,
+                    subject TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    type TEXT DEFAULT 'bug',
+                    status TEXT DEFAULT 'new',
+                    admin_comment TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """)
+
+            cursor.execute(
+                """
+                INSERT INTO feedback (user_id, user_name, user_email, subject, message, type)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    user["id"],
+                    user["full_name"],
+                    user["email"],
+                    feedback.subject,
+                    feedback.message,
+                    feedback.type,
+                ),
             )
-        """)
+            feedback_id = cursor.lastrowid
 
-        cursor.execute(
-            """
-            INSERT INTO feedback (user_id, user_name, user_email, subject, message, type)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """,
-            (
-                user["id"],
-                user["full_name"],
-                user["email"],
-                feedback.subject,
-                feedback.message,
-                feedback.type,
-            ),
-        )
-
-        feedback_id = cursor.lastrowid
-        cursor.execute("SELECT * FROM feedback WHERE id = ?", (feedback_id,))
-        new_feedback = cursor.fetchone()
-
-    # Отправляем уведомление администратору
-    send_feedback_email(
-        feedback.subject,
-        feedback.message,
-        user["full_name"],
-        user["email"],
-        feedback.type,
-    )
-
-    return {"message": "Спасибо за обратную связь!", "id": feedback_id}
+        logger.info(f"Feedback #{feedback_id} created by {user['email']}")
+        return {
+            "message": "Спасибо за обратную связь!",
+            "id": feedback_id,
+            "status": "new",
+        }
+    except Exception as e:
+        logger.error(f"Error creating feedback: {e}")
+        raise HTTPException(500, "Внутренняя ошибка сервера")
 
 
 @router.get("/admin/feedback")
-async def get_all_feedback(admin: dict = Depends(get_current_user)):
+async def get_all_feedback(admin: dict = Depends(get_current_admin)):
     """Получить все сообщения (только админ)"""
-    if admin["role"] != "admin":
-        raise HTTPException(403, "Доступ запрещён")
-
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM feedback ORDER BY created_at DESC")
+        cursor.execute("""
+            SELECT f.*, u.email as user_email
+            FROM feedback f
+            JOIN users u ON f.user_id = u.id
+            ORDER BY 
+                CASE f.status 
+                    WHEN 'new' THEN 1 
+                    WHEN 'in_progress' THEN 2 
+                    ELSE 3 
+                END,
+                f.created_at DESC
+        """)
         feedback = cursor.fetchall()
-
     return [dict(f) for f in feedback]
 
 
-@router.put("/admin/feedback/{feedback_id}/status")
-async def update_feedback_status(
-    feedback_id: int, status: str, admin: dict = Depends(get_current_user)
+@router.get("/admin/feedback/{feedback_id}")
+async def get_feedback_detail(
+    feedback_id: int, admin: dict = Depends(get_current_admin)
 ):
-    """Изменить статус сообщения (только админ)"""
-    if admin["role"] != "admin":
-        raise HTTPException(403, "Доступ запрещён")
-
+    """Получить детали сообщения"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE feedback SET status = ? WHERE id = ?", (status, feedback_id)
+            """
+            SELECT f.*, u.email as user_email
+            FROM feedback f
+            JOIN users u ON f.user_id = u.id
+            WHERE f.id = ?
+        """,
+            (feedback_id,),
         )
+        feedback = cursor.fetchone()
+        if not feedback:
+            raise HTTPException(404, "Сообщение не найдено")
+    return dict(feedback)
 
-    return {"message": "Статус обновлён"}
+
+@router.put("/admin/feedback/{feedback_id}")
+async def update_feedback(
+    feedback_id: int, update: FeedbackUpdate, admin: dict = Depends(get_current_admin)
+):
+    """Обновить статус или комментарий сообщения"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        if update.status is not None:
+            cursor.execute(
+                "UPDATE feedback SET status = ? WHERE id = ?",
+                (update.status, feedback_id),
+            )
+
+        if update.comment is not None:
+            cursor.execute(
+                "UPDATE feedback SET admin_comment = ? WHERE id = ?",
+                (update.comment, feedback_id),
+            )
+
+        if cursor.rowcount == 0:
+            raise HTTPException(404, "Сообщение не найдено")
+
+        conn.commit()
+
+    return {"message": "Сообщение обновлено"}
+
+
+@router.delete("/admin/feedback/{feedback_id}")
+async def delete_feedback(feedback_id: int, admin: dict = Depends(get_current_admin)):
+    """Удалить сообщение (только админ)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM feedback WHERE id = ?", (feedback_id,))
+
+        if cursor.rowcount == 0:
+            raise HTTPException(404, "Сообщение не найдено")
+
+    logger.info(f"Feedback #{feedback_id} deleted by {admin['email']}")
+    return {"message": "Сообщение удалено"}
+
+
+@router.get("/admin/feedback/stats/summary")
+async def get_feedback_stats(admin: dict = Depends(get_current_admin)):
+    """Получить статистику по фидбэку"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) as total FROM feedback")
+        total = cursor.fetchone()["total"] or 0
+
+        cursor.execute("SELECT COUNT(*) as new FROM feedback WHERE status = 'new'")
+        new_count = cursor.fetchone()["new"] or 0
+
+        cursor.execute(
+            "SELECT COUNT(*) as in_progress FROM feedback WHERE status = 'in_progress'"
+        )
+        in_progress_count = cursor.fetchone()["in_progress"] or 0
+
+        cursor.execute(
+            "SELECT COUNT(*) as completed FROM feedback WHERE status = 'completed'"
+        )
+        completed_count = cursor.fetchone()["completed"] or 0
+
+        cursor.execute("SELECT COUNT(*) as bugs FROM feedback WHERE type = 'bug'")
+        bugs_count = cursor.fetchone()["bugs"] or 0
+
+        cursor.execute(
+            "SELECT COUNT(*) as features FROM feedback WHERE type = 'feature'"
+        )
+        features_count = cursor.fetchone()["features"] or 0
+
+        cursor.execute(
+            "SELECT COUNT(*) as questions FROM feedback WHERE type = 'question'"
+        )
+        questions_count = cursor.fetchone()["questions"] or 0
+
+    return {
+        "total": total,
+        "by_status": {
+            "new": new_count,
+            "in_progress": in_progress_count,
+            "completed": completed_count,
+        },
+        "by_type": {
+            "bug": bugs_count,
+            "feature": features_count,
+            "question": questions_count,
+        },
+    }

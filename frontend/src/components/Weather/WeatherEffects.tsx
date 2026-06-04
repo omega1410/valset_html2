@@ -1,9 +1,8 @@
-// frontend/src/components/Weather/WeatherEffects.tsx
 import { useEffect, useState } from 'react';
 
 interface WeatherEffectsProps {
   weatherMain: string;
-  isVisible?: boolean; // Добавляем пропс для контроля видимости
+  isVisible?: boolean;
 }
 
 export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffectsProps) => {
@@ -15,66 +14,68 @@ export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffects
       return;
     }
 
+    // Солнце - справа по центру, чуть выше
     if (weatherMain === 'Clear') {
       setEffects([
         <div
-          key="sun-glow"
-          className="absolute top-5 right-5 w-48 h-48 bg-yellow-400/30 rounded-full blur-3xl animate-pulse"
-          style={{ zIndex: 1 }}
-        />,
-        <div
-          key="sun-core"
-          className="absolute top-10 right-10 w-24 h-24 bg-yellow-300/40 rounded-full blur-2xl animate-ping"
-          style={{ zIndex: 1 }}
+          key="sun"
+          className="absolute rounded-full blur-xl sun-pulse"
+          style={{ 
+            top: '15%',
+            right: '5%',
+            width: '140px',
+            height: '140px',
+            zIndex: 1,
+            background: 'radial-gradient(circle, rgba(255,220,80,0.9), rgba(255,120,50,0.5))',
+            boxShadow: '0 0 50px rgba(255,200,50,0.5)',
+          }}
         />,
       ]);
     }
+    // Облака
     else if (weatherMain === 'Clouds') {
-      setEffects([
+      const clouds = [
+        { top: '5%', left: '-20%', width: '220px', height: '110px', className: 'animate-float-slow' },
+        { top: '15%', left: '15%', width: '300px', height: '150px', className: 'animate-float-medium' },
+        { top: '35%', left: '-10%', width: '260px', height: '130px', className: 'animate-float-fast' },
+        { top: '50%', left: '25%', width: '320px', height: '160px', className: 'animate-float-slow' },
+        { top: '65%', left: '-20%', width: '240px', height: '120px', className: 'animate-float-medium' },
+        { top: '80%', left: '5%', width: '280px', height: '140px', className: 'animate-float-fast' },
+        { top: '10%', left: '55%', width: '270px', height: '135px', className: 'animate-float-slow' },
+        { top: '28%', left: '70%', width: '230px', height: '115px', className: 'animate-float-medium' },
+        { top: '48%', left: '80%', width: '310px', height: '155px', className: 'animate-float-fast' },
+        { top: '75%', left: '60%', width: '250px', height: '125px', className: 'animate-float-slow' },
+      ];
+      
+      setEffects(
+        clouds.map((cloud, i) => (
           <div
-          key="cloud1"
-          className="absolute w-80 h-40 bg-white/40 rounded-full blur-3xl animate-float-slow"
-          style={{ top: '5%', left: '-80px', zIndex: 1 }}
-          />,
-          <div
-          key="cloud2"
-          className="absolute w-96 h-48 bg-white/30 rounded-full blur-3xl animate-float-medium"
-          style={{ bottom: '20%', right: '-100px', zIndex: 1 }}
-          />,
-          <div
-          key="cloud3"
-          className="absolute w-72 h-36 bg-white/35 rounded-full blur-3xl animate-float-fast"
-          style={{ top: '40%', left: '10%', zIndex: 1 }}
-          />,
-          <div
-          key="cloud4"
-          className="absolute w-64 h-32 bg-white/25 rounded-full blur-3xl animate-float-slow"
-          style={{ top: '70%', right: '15%', zIndex: 1 }}
-          />,
-          <div
-          key="cloud5"
-          className="absolute w-56 h-28 bg-white/30 rounded-full blur-3xl animate-float-medium"
-          style={{ top: '25%', right: '30%', zIndex: 1 }}
-          />,
-          <div
-          key="cloud6"
-          className="absolute w-84 h-44 bg-white/30 rounded-full blur-3x1 animate-float-fast"
-          style={{ bottom: '55%', left: '30%', zIndex: 1 }}
-          />,
-      ]);
+            key={`cloud-${i}`}
+            className={`absolute bg-white/30 rounded-full blur-3xl ${cloud.className}`}
+            style={{
+              top: cloud.top,
+              left: cloud.left,
+              width: cloud.width,
+              height: cloud.height,
+              zIndex: 1,
+            }}
+          />
+        ))
+      );
     }
+    // Дождь - начинаем за пределами баннера
     else if (weatherMain === 'Rain' || weatherMain === 'Drizzle') {
       const drops = [];
-      for (let i = 0; i < 70; i++) {
+      for (let i = 0; i < 100; i++) {
         drops.push(
           <div
-            key={i}
+            key={`rain-${i}`}
             className="absolute text-blue-300/60 text-base animate-rain"
             style={{
               left: `${Math.random() * 100}%`,
-              top: '-30px',
-              animationDelay: `${Math.random() * 2}s`,
-              animationDuration: `${0.7 + Math.random() * 0.6}s`,
+              top: `${-20 - Math.random() * 30}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${0.5 + Math.random() * 0.6}s`,
               zIndex: 1,
             }}
           >
@@ -84,18 +85,19 @@ export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffects
       }
       setEffects(drops);
     }
+    // Снег - начинаем за пределами баннера
     else if (weatherMain === 'Snow') {
       const flakes = [];
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 80; i++) {
         flakes.push(
           <div
-            key={i}
+            key={`snow-${i}`}
             className="absolute text-white/70 text-base animate-snow"
             style={{
               left: `${Math.random() * 100}%`,
-              top: '-30px',
+              top: `${-20 - Math.random() * 30}%`,
               animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 2}s`,
+              animationDuration: `${2 + Math.random() * 2}s`,
               zIndex: 1,
             }}
           >
@@ -105,18 +107,19 @@ export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffects
       }
       setEffects(flakes);
     }
+    // Гроза
     else if (weatherMain === 'Thunderstorm') {
-      const stormEffects = [];
-      for (let i = 0; i < 70; i++) {
-        stormEffects.push(
+      const storm = [];
+      for (let i = 0; i < 80; i++) {
+        storm.push(
           <div
-            key={`rain-${i}`}
+            key={`storm-rain-${i}`}
             className="absolute text-blue-300/60 text-base animate-rain"
             style={{
               left: `${Math.random() * 100}%`,
-              top: '-30px',
-              animationDelay: `${Math.random() * 2}s`,
-              animationDuration: `${0.7 + Math.random() * 0.6}s`,
+              top: `${-20 - Math.random() * 30}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${0.5 + Math.random() * 0.6}s`,
               zIndex: 1,
             }}
           >
@@ -124,16 +127,30 @@ export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffects
           </div>
         );
       }
-      stormEffects.push(
+      storm.push(
         <div
-          key="flash"
-          className="absolute inset-0 bg-white/40 pointer-events-none animate-flash-random"
+          key="lightning"
+          className="absolute inset-0 bg-white/30 pointer-events-none animate-flash-random"
           style={{ zIndex: 2 }}
         />
       );
-      setEffects(stormEffects);
+      setEffects(storm);
     }
-    else {
+    // Туман
+    else if (weatherMain === 'Fog') {
+      setEffects([
+        <div
+          key="fog-1"
+          className="absolute inset-0 bg-white/20 backdrop-blur-[3px] fog-effect"
+          style={{ zIndex: 1 }}
+        />,
+        <div
+          key="fog-2"
+          className="absolute inset-0 bg-gradient-to-t from-white/20 via-transparent to-transparent fog-effect"
+          style={{ zIndex: 1, animationDelay: '0.5s' }}
+        />,
+      ]);
+    } else {
       setEffects([]);
     }
   }, [weatherMain, isVisible]);
