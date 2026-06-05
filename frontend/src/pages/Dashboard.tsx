@@ -268,7 +268,7 @@ export const Dashboard = () => {
           {isAdmin && stats?.admin && (
             <div className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-md border border-slate-200 dark:border-slate-700">
               <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
                 Статистика отеля
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

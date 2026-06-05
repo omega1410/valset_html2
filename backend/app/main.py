@@ -22,6 +22,7 @@ from app.routes import (
     admin_news,
     stats,
     feedback,
+    telegram,
 )
 from app.routes import tests as tests_route, checklists, ai
 from app.utils.search_fts import init_fts
@@ -88,6 +89,7 @@ app.include_router(news.router, prefix="/api/news", tags=["Новости"])
 app.include_router(admin_news.router, prefix="/api/admin", tags=["Admin - Новости"])
 app.include_router(stats.router, prefix="/api/stats", tags=["Статистика"])
 app.include_router(feedback.router, prefix="/api/feedback", tags=["Обратная связь"])
+app.include_router(telegram.router, prefix="/telegram", tags=["Telegram"])
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
 

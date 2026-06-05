@@ -6,7 +6,7 @@ interface WeatherEffectsProps {
 }
 
 export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffectsProps) => {
-  const [effects, setEffects] = useState<JSX.Element[]>([]);
+  const [effects, setEffects] = useState<React.ReactNode[]>([]);
 
   useEffect(() => {
     if (!isVisible) {

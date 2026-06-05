@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Login } from './pages/Login';
@@ -21,6 +21,21 @@ import { ResetPassword } from './pages/ResetPassword';
 import { FeedbackButton } from './components/Feedback/FeedbackButton';
 
 const queryClient = new QueryClient();
+
+// Компонент для кнопок (использует useLocation внутри Router)
+function FloatingButtons() {
+  const location = useLocation();
+  const hideButtons = location.pathname === '/reset-password' || location.pathname === '/login';
+  
+  if (hideButtons) return null;
+  
+  return (
+    <div className="fixed bottom-6 right-6 flex items-stretch gap-3 z-50">
+      <ChatWidget />
+      <FeedbackButton />
+    </div>
+  );
+}
 
 function AppContent() {
   const { theme } = useTheme();
@@ -51,11 +66,7 @@ function AppContent() {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
           
-          {/* Кнопки в правом нижнем углу — в одну строку */}
-          <div className="fixed bottom-6 right-6 flex items-stretch gap-3 z-50">
-            <ChatWidget />
-            <FeedbackButton />
-          </div>
+          <FloatingButtons />
         </BrowserRouter>
       </QueryClientProvider>
     </div>

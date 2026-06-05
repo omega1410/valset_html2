@@ -8,6 +8,6 @@ export const filesService = {
   
   // Для скачивания используем прямую ссылку без авторизации
   getDownloadUrl: (filename: string) => {
-    return `http://localhost:8000/api/files/download/${filename}`;
+    return `/api/files/download/${filename}`;
   },
 };

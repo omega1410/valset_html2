@@ -23,7 +23,16 @@ export const NewsFeed = () => {
   };
 
   const formatDate = (dateStr: string) => {
-    return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: ru });
+    const date = new Date(dateStr);
+    // Добавляем 3 часа для МСК
+    date.setHours(date.getHours() + 3);
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (loading) {

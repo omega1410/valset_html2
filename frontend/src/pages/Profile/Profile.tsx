@@ -54,7 +54,7 @@ export const Profile = () => {
     formData.append('file', file);
     
     try {
-      const response = await fetch('http://localhost:8000/api/auth/me/avatar', {
+      const response = await fetch('/api/auth/me/avatar', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -123,7 +123,7 @@ export const Profile = () => {
           <div className="relative">
             {user?.avatar ? (
               <img
-                src={`http://localhost:8000/avatars/${user.avatar}?t=${Date.now()}`}
+                src={`/avatars/${user.avatar}?t=${Date.now()}`}
                 alt="Avatar"
                 className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-slate-700 shadow-lg"
                 onError={(e) => {

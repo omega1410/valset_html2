@@ -15,7 +15,7 @@ export const Layout = () => {
   useEffect(() => {
     // Устанавливаем иконку в зависимости от темы
     const iconName = theme === 'light' ? 'icon-light.svg' : 'icon-dark.svg';
-    setIconSrc(`http://localhost:8000/assets/${iconName}`);
+    setIconSrc(`/assets/${iconName}`);
   }, [theme]);
 
   const handleLogout = () => {
@@ -97,7 +97,7 @@ export const Layout = () => {
                   >
                     {user?.avatar ? (
                       <img
-                        src={`http://localhost:8000/avatars/${user.avatar}`}
+                        src={`/avatars/${user.avatar}`}
                         alt="Avatar"
                         className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-600"
                         onError={(e) => {
