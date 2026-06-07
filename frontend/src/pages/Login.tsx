@@ -204,16 +204,6 @@ export const Login = () => {
                 'Войти'
               )}
             </button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setForgotPasswordMode(true)}
-                className="text-sm text-white/70 hover:text-white transition"
-              >
-                Забыли пароль?
-              </button>
-            </div>
           </form>
 
           <div className="mt-6 pt-4 border-t border-white/30 text-center">

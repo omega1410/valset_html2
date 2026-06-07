@@ -19,6 +19,7 @@ import { ChatWidget } from './components/Chat/ChatWidget';
 import { Profile } from './pages/Profile/Profile';
 import { ResetPassword } from './pages/ResetPassword';
 import { FeedbackButton } from './components/Feedback/FeedbackButton';
+import { PagedTestPassing } from './pages/Tests/PagedTestPassing';
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ function AppContent() {
                 <Route path="/logbook" element={<Logbook />} />
                 <Route path="/admin/*" element={<AdminPanel />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/tests/:id/paged" element={<PagedTestPassing />} />
               </Route>
             </Route>
             <Route path="*" element={<Navigate to="/" />} />

@@ -152,3 +152,63 @@ async def submit_test(
         "percentage": round(correct / len(questions) * 100),
         "passed": correct / len(questions) >= 0.7,
     }
+
+@router.get("/{test_id}/paged")
+async def get_test_paged(
+    test_id: int, 
+    page: int = 1, 
+    limit: int = 5,
+    user: dict = Depends(get_current_user)
+):
+    """Получить тест постранично (для длинных тестов)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Получаем тест
+        cursor.execute("SELECT * FROM tests WHERE id = ?", (test_id,))
+        test = cursor.fetchone()
+        
+        if not test:
+            raise HTTPException(404, "Тест не найден")
+        
+        # Получаем общее количество вопросов
+        cursor.execute(
+            "SELECT COUNT(*) as total FROM test_questions WHERE test_id = ?",
+            (test_id,)
+        )
+        total = cursor.fetchone()["total"]
+        
+        # Получаем вопросы с пагинацией
+        offset = (page - 1) * limit
+        cursor.execute(
+            """
+            SELECT id, question, option1, option2, option3, order_num
+            FROM test_questions 
+            WHERE test_id = ? 
+            ORDER BY order_num
+            LIMIT ? OFFSET ?
+            """,
+            (test_id, limit, offset)
+        )
+        questions = cursor.fetchall()
+        
+    return {
+        "id": test["id"],
+        "title": test["title"],
+        "description": test["description"],
+        "section_id": test["section_id"],
+        "questions": [
+            {
+                "id": q["id"],
+                "question": q["question"],
+                "options": [q["option1"], q["option2"], q["option3"]],
+                "order_num": q["order_num"]
+            }
+            for q in questions
+        ],
+        "current_page": page,
+        "total_pages": (total + limit - 1) // limit,
+        "total_questions": total,
+        "questions_per_page": limit,
+        "is_paged": True
+    }

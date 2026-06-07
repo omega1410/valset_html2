@@ -71,26 +71,38 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
         )
         weekly_activity = cursor.fetchone()["weekly_activity"] or 0
 
+        # Общее количество тестов в системе (из таблицы tests)
+        cursor.execute("SELECT COUNT(*) as total FROM tests")
+        total_tests = cursor.fetchone()["total"] or 0
+
+        # Количество пройденных тестов пользователем (>=70%)
+        cursor.execute(
+            """
+            SELECT COUNT(DISTINCT section_id) as passed
+            FROM test_stats
+            WHERE user_id = ? AND section_id != 0 AND (correct_answers * 1.0 / total_questions) >= 0.7
+            """,
+            (user["id"],),
+        )
+        passed_tests = cursor.fetchone()["passed"] or 0
+
+        tests_completion_percentage = round(passed_tests / total_tests * 100) if total_tests > 0 else 0
+
         # ========== АДМИН-СТАТИСТИКА ==========
         admin_stats = None
         if user["role"] == "admin":
-            # Существующие метрики
             cursor.execute("SELECT COUNT(*) as total FROM users WHERE role = 'user'")
             total_users = cursor.fetchone()["total"] or 0
 
-            cursor.execute(
-                "SELECT COUNT(*) as total FROM test_stats WHERE section_id != 0"
-            )
+            # Общее количество тестов в системе (из таблицы tests)
+            cursor.execute("SELECT COUNT(*) as total FROM tests")
             total_tests_all = cursor.fetchone()["total"] or 0
 
-            cursor.execute(
-                "SELECT SUM(correct_answers) as total FROM test_stats WHERE section_id = 0"
-            )
+            cursor.execute("SELECT SUM(correct_answers) as total FROM test_stats WHERE section_id = 0")
             total_checklists_all = cursor.fetchone()["total"] or 0
 
-            # НОВЫЕ МЕТРИКИ:
 
-            # 1. Топ-3 активных сотрудников (по сумме тестов + чек-листов + задач)
+            # Топ-3 активных сотрудников
             cursor.execute("""
                 SELECT 
                     u.id,
@@ -128,7 +140,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             """)
             top_active = [dict(row) for row in cursor.fetchall()]
 
-            # 2. Топ-3 отстающих сотрудников (низкий средний балл и мало активности)
+            # Топ-3 отстающих сотрудников
             cursor.execute("""
                 SELECT 
                     u.id,
@@ -158,7 +170,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             """)
             top_struggling = [dict(row) for row in cursor.fetchall()]
 
-            # 4. Лучший по тестам (самый высокий средний балл, минимум 2 теста)
+            # Лучший по тестам
             cursor.execute("""
                 SELECT 
                     u.id,
@@ -178,7 +190,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             best_in_tests = cursor.fetchone()
             best_in_tests = dict(best_in_tests) if best_in_tests else None
 
-            # 5. Лучший по чек-листам
+            # Лучший по чек-листам
             cursor.execute("""
                 SELECT 
                     u.id,
@@ -194,9 +206,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
                 LIMIT 1
             """)
             best_in_checklists = cursor.fetchone()
-            best_in_checklists = (
-                dict(best_in_checklists) if best_in_checklists else None
-            )
+            best_in_checklists = dict(best_in_checklists) if best_in_checklists else None
 
             admin_stats = {
                 "total_users": total_users,
@@ -216,6 +226,9 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             "completed_checklists": completed_checklists,
             "viewed_sections": viewed_sections,
             "weekly_activity": weekly_activity,
+            "total_tests": total_tests,
+            "passed_tests": passed_tests,
+            "tests_completion_percentage": tests_completion_percentage,
         },
         "admin": admin_stats,
     }

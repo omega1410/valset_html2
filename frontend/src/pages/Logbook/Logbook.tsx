@@ -15,7 +15,6 @@ export const Logbook = () => {
   const [showMyOnly, setShowMyOnly] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   
-  // Форма
   const [formRoom, setFormRoom] = useState('');
   const [formTask, setFormTask] = useState('');
   const [formAssignee, setFormAssignee] = useState('');
@@ -24,17 +23,11 @@ export const Logbook = () => {
 
   const formatAuthorName = (fullName: string) => {
     if (!fullName || fullName === '—') return '—';
-  
     const parts = fullName.trim().split(/\s+/);
-  
-    if (parts.length === 1) {
-      return parts[0];
-    }
-  
+    if (parts.length === 1) return parts[0];
     const firstName = parts[0];
     const lastName = parts[parts.length - 1];
     const lastNameInitial = lastName.charAt(0);
-  
     return `${firstName} ${lastNameInitial}.`;
   };
 
@@ -117,7 +110,6 @@ export const Logbook = () => {
       toast.error('Заполните задачу');
       return;
     }
-    
     try {
       if (editingEntry) {
         await logbookService.update(editingEntry.id, {
@@ -148,8 +140,8 @@ export const Logbook = () => {
 
   const handleComplete = async (id: number) => {
     try {
-      await logbookService.complete(id);
-      toast.success('Задача выполнена');
+      const response = await logbookService.complete(id);
+      toast.success(response.message || 'Статус изменён');
       loadEntries();
       loadImportantEntries();
     } catch (error: any) {
@@ -219,7 +211,7 @@ export const Logbook = () => {
     if (status === 'completed') {
       return <span className="inline-block px-2 py-1 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 whitespace-nowrap">✓ Выполнено</span>;
     }
-    return <span className="inline-block px-2 py-1 text-xs rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 whitespace-nowrap">⟳ В работе</span>;
+    return <span className="inline-block px-2 py-1 text-xs rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 whitespace-nowrap">⏳ В работе</span>;
   };
 
   return (
@@ -229,12 +221,9 @@ export const Logbook = () => {
           <h1 className="page-title">Логбук</h1>
           <p className="page-subtitle">Журнал задач и поручений</p>
         </div>
-        <button onClick={openCreateModal} className="btn-primary">
-          + Новая задача
-        </button>
+        <button onClick={openCreateModal} className="btn-primary">+ Новая задача</button>
       </div>
 
-      {/* Блок важных задач */}
       {!showHistory && importantEntries.length > 0 && (
         <div className="card overflow-hidden border-l-4 border-l-amber-500">
           <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800">
@@ -267,53 +256,23 @@ export const Logbook = () => {
                         <span className="text-amber-500">⭐</span>
                         <p className="font-medium text-slate-800 dark:text-white">{entry.task}</p>
                       </div>
-                      {entry.comment && (
-                        <p className="text-xs text-slate-400 mt-1 ml-5">💬 {entry.comment}</p>
-                      )}
+                      {entry.comment && <p className="text-xs text-slate-400 mt-1 ml-5">💬 {entry.comment}</p>}
                     </td>
                     <td className="table-cell">{entry.assignee || '—'}</td>
                     <td className="table-cell whitespace-nowrap">{formatAuthorName(entry.author_name)}</td>
                     <td className="table-cell">{getStatusBadge(entry.status)}</td>
-                    <td className="table-cell text-sm text-slate-500 whitespace-nowrap">
-                      {formatDate(entry.created_at)}
-                    </td>
+                    <td className="table-cell text-sm text-slate-500 whitespace-nowrap">{formatDate(entry.created_at)}</td>
                     <td className="table-cell whitespace-nowrap">
                       <div className="flex gap-1">
-                        {entry.status !== 'completed' && (
-                          <>
-                            <button
-                              onClick={() => handleComplete(entry.id)}
-                              className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm"
-                              title="Отметить выполненным"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={() => handleToggleImportant(entry.id)}
-                              className="w-7 h-7 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 flex items-center justify-center text-sm"
-                              title="Снять отметку важности"
-                            >
-                              ⭐
-                            </button>
-                          </>
+                        <button onClick={() => handleComplete(entry.id)} className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm" title={entry.status === 'completed' ? 'Вернуть в работу' : 'Отметить выполненным'}>
+                          {entry.status === 'completed' ? '↺' : '✓'}
+                        </button>
+                        {(entry.author_id === user?.id || isAdmin) && entry.status !== 'completed' && (
+                          <button onClick={() => openEditModal(entry)} className="w-7 h-7 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 flex items-center justify-center text-sm" title="Редактировать">✎</button>
                         )}
+                        <button onClick={() => handleToggleImportant(entry.id)} className="w-7 h-7 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 flex items-center justify-center text-sm" title="Снять отметку важности">⭐</button>
                         {(entry.author_id === user?.id || isAdmin) && (
-                          <>
-                            <button
-                              onClick={() => openEditModal(entry)}
-                              className="w-7 h-7 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 flex items-center justify-center text-sm"
-                              title="Редактировать"
-                            >
-                              ✎
-                            </button>
-                            <button
-                              onClick={() => handleDelete(entry.id)}
-                              className="w-7 h-7 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 flex items-center justify-center text-sm"
-                              title="Удалить"
-                            >
-                              ✕
-                            </button>
-                          </>
+                          <button onClick={() => handleDelete(entry.id)} className="w-7 h-7 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 flex items-center justify-center text-sm" title="Удалить">✕</button>
                         )}
                       </div>
                     </td>
@@ -325,338 +284,137 @@ export const Logbook = () => {
         </div>
       )}
 
-      {/* Фильтры */}
       <div className="flex gap-4 flex-wrap items-center justify-between">
         <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setShowHistory(false);
-              setFilter('all');
-            }}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              !showHistory && filter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'
-            }`}
-          >
-            Все
-          </button>
-          <button
-            onClick={() => {
-              setShowHistory(false);
-              setFilter('pending');
-            }}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              !showHistory && filter === 'pending' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'
-            }`}
-          >
-            В работе
-          </button>
-          <button
-            onClick={() => {
-              setShowHistory(false);
-              setFilter('completed');
-            }}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              !showHistory && filter === 'completed' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'
-            }`}
-          >
-            Выполненные
-          </button>
-          <button
-            onClick={() => {
-              setShowHistory(true);
-              loadHistory();
-            }}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              showHistory ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'
-            }`}
-          >
-            История
-          </button>
+          <button onClick={() => { setShowHistory(false); setFilter('all'); }} className={`px-3 py-1 rounded-lg text-sm transition ${!showHistory && filter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>Все</button>
+          <button onClick={() => { setShowHistory(false); setFilter('pending'); }} className={`px-3 py-1 rounded-lg text-sm transition ${!showHistory && filter === 'pending' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>В работе</button>
+          <button onClick={() => { setShowHistory(false); setFilter('completed'); }} className={`px-3 py-1 rounded-lg text-sm transition ${!showHistory && filter === 'completed' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>Выполненные</button>
+          <button onClick={() => { setShowHistory(true); loadHistory(); }} className={`px-3 py-1 rounded-lg text-sm transition ${showHistory ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>История</button>
         </div>
-        
         {!isAdmin && !showHistory && (
-          <button
-            onClick={() => setShowMyOnly(!showMyOnly)}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              showMyOnly ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-700'
-            }`}
-          >
-            Только мои
-          </button>
+          <button onClick={() => setShowMyOnly(!showMyOnly)} className={`px-3 py-1 rounded-lg text-sm transition ${showMyOnly ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>Только мои</button>
         )}
       </div>
 
-      {/* Основная таблица */}
       {!showHistory && (
-        loading ? (
-          <div className="text-center py-12 text-slate-500">Загрузка...</div>
-        ) : entries.length === 0 ? (
-          <div className="card p-12 text-center">
-            <p className="text-slate-500">Нет записей</p>
-          </div>
-        ) : (
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="table-header">
-                  <tr>
-                    <th className="table-header-cell w-16">№</th>
-                    <th className="table-header-cell w-32">Номер комнаты</th>
-                    <th className="table-header-cell">Задача</th>
-                    <th className="table-header-cell w-40">Исполнитель</th>
-                    <th className="table-header-cell w-32">Автор</th>
-                    <th className="table-header-cell w-28">Статус</th>
-                    <th className="table-header-cell w-44">Дата</th>
-                    <th className="table-header-cell w-32">Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.filter(e => !e.is_important).map((entry) => (
-                    <tr key={entry.id} className="table-row">
-                      <td className="table-cell text-slate-500">{entry.id}</td>
-                      <td className="table-cell font-mono text-sm">{entry.room_number || '—'}</td>
-                      <td className="table-cell">
-                        <div className="max-w-md">
-                          <p className="font-medium text-slate-800 dark:text-white">{entry.task}</p>
-                          {entry.comment && (
-                            <p className="text-xs text-slate-400 mt-1">💬 {entry.comment}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="table-cell">{entry.assignee || '—'}</td>
-                      <td className="table-cell whitespace-nowrap">{formatAuthorName(entry.author_name)}</td>
-                      <td className="table-cell">{getStatusBadge(entry.status)}</td>
-                      <td className="table-cell text-sm text-slate-500 whitespace-nowrap">
-                        {formatDate(entry.created_at)}
-                      </td>
-                      <td className="table-cell whitespace-nowrap">
-                        <div className="flex gap-1">
-                          {entry.status !== 'completed' && (
-                            <>
-                              <button
-                                onClick={() => handleComplete(entry.id)}
-                                className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm"
-                                title="Отметить выполненным"
-                              >
-                                ✓
-                              </button>
-                              {(entry.author_id === user?.id || isAdmin) && (
-                                <button
-                                  onClick={() => handleToggleImportant(entry.id)}
-                                  className="w-7 h-7 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 flex items-center justify-center text-sm"
-                                  title="Отметить как важное"
-                                >
-                                  ☆
-                                </button>
-                              )}
-                            </>
-                          )}
-                          {(entry.author_id === user?.id || isAdmin) && entry.status !== 'completed' && (
-                            <>
-                              <button
-                                onClick={() => openEditModal(entry)}
-                                className="w-7 h-7 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 flex items-center justify-center text-sm"
-                                title="Редактировать"
-                              >
-                                ✎
-                              </button>
-                              <button
-                                onClick={() => handleDelete(entry.id)}
-                                className="w-7 h-7 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 flex items-center justify-center text-sm"
-                                title="Удалить"
-                              >
-                                ✕
-                              </button>
-                            </>
-                          )}
-                          {entry.status === 'completed' && (entry.author_id === user?.id || isAdmin) && (
-                            <button
-                              onClick={() => handleDelete(entry.id)}
-                              className="w-7 h-7 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 flex items-center justify-center text-sm"
-                              title="Удалить"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )
-      )}
-
-      {/* Таблица истории (видна всем) */}
-      {showHistory && (
-        loading ? (
-          <div className="text-center py-12 text-slate-500">Загрузка...</div>
-        ) : historyEntries.length === 0 ? (
-          <div className="card p-12 text-center">
-            <p className="text-slate-500">История пуста</p>
-          </div>
-        ) : (
-          <div className="card overflow-hidden opacity-75">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="table-header">
-                  <tr>
-                    <th className="table-header-cell w-16">№</th>
-                    <th className="table-header-cell w-32">Номер комнаты</th>
-                    <th className="table-header-cell">Задача</th>
-                    <th className="table-header-cell w-40">Исполнитель</th>
-                    <th className="table-header-cell w-32">Автор</th>
-                    <th className="table-header-cell w-28">Статус</th>
-                    <th className="table-header-cell w-44">Удалена</th>
-                    <th className="table-header-cell w-24">Действия</th>
+        loading ? <div className="text-center py-12 text-slate-500">Загрузка...</div> :
+        entries.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">Нет записей</p></div> :
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="table-header">
+                <tr>
+                  <th className="table-header-cell w-16">№</th>
+                  <th className="table-header-cell w-32">Номер комнаты</th>
+                  <th className="table-header-cell">Задача</th>
+                  <th className="table-header-cell w-40">Исполнитель</th>
+                  <th className="table-header-cell w-32">Автор</th>
+                  <th className="table-header-cell w-28">Статус</th>
+                  <th className="table-header-cell w-44">Дата</th>
+                  <th className="table-header-cell w-32">Действия</th>
                 </tr>
-                </thead>
-                <tbody>
-                  {historyEntries.map((entry) => (
-                    <tr key={entry.id} className="table-row">
-                      <td className="table-cell text-slate-500">{entry.id}</td>
-                      <td className="table-cell font-mono text-sm">{entry.room_number || '—'}</td>
-                      <td className="table-cell">
+              </thead>
+              <tbody>
+                {entries.filter(e => !e.is_important).map((entry) => (
+                  <tr key={entry.id} className="table-row">
+                    <td className="table-cell text-slate-500">{entry.id}</td>
+                    <td className="table-cell font-mono text-sm">{entry.room_number || '—'}</td>
+                    <td className="table-cell">
+                      <div className="max-w-md">
                         <p className="font-medium text-slate-800 dark:text-white">{entry.task}</p>
-                        {entry.comment && (
-                          <p className="text-xs text-slate-400 mt-1">💬 {entry.comment}</p>
+                        {entry.comment && <p className="text-xs text-slate-400 mt-1">💬 {entry.comment}</p>}
+                      </div>
+                    </td>
+                    <td className="table-cell">{entry.assignee || '—'}</td>
+                    <td className="table-cell whitespace-nowrap">{formatAuthorName(entry.author_name)}</td>
+                    <td className="table-cell">{getStatusBadge(entry.status)}</td>
+                    <td className="table-cell text-sm text-slate-500 whitespace-nowrap">{formatDate(entry.created_at)}</td>
+                    <td className="table-cell whitespace-nowrap">
+                      <div className="flex gap-1">
+                        <button onClick={() => handleComplete(entry.id)} className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm" title={entry.status === 'completed' ? 'Вернуть в работу' : 'Отметить выполненным'}>
+                          {entry.status === 'completed' ? '↺' : '✓'}
+                        </button>
+                        {(entry.author_id === user?.id || isAdmin) && entry.status !== 'completed' && (
+                          <>
+                            <button onClick={() => openEditModal(entry)} className="w-7 h-7 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 flex items-center justify-center text-sm" title="Редактировать">✎</button>
+                            <button onClick={() => handleToggleImportant(entry.id)} className="w-7 h-7 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 flex items-center justify-center text-sm" title="Отметить как важное">☆</button>
+                          </>
                         )}
-                      </td>
-                      <td className="table-cell">{entry.assignee || '—'}</td>
-                      <td className="table-cell whitespace-nowrap">{formatAuthorName(entry.author_name)}</td>
-                      <td className="table-cell">{getStatusBadge(entry.status)}</td>
-                      <td className="table-cell text-sm text-slate-500 whitespace-nowrap">
-                        {entry.deleted_at ? formatDate(entry.deleted_at) : '—'}
-                      </td>
-                      <td className="table-cell whitespace-nowrap">
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleRestore(entry.id)}
-                            className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm"
-                            title="Восстановить"
-                          >
-                            ↺
-                          </button>
+                        {(entry.author_id === user?.id || isAdmin) && (
+                          <button onClick={() => handleDelete(entry.id)} className="w-7 h-7 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 flex items-center justify-center text-sm" title="Удалить">✕</button>
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )
+        </div>
       )}
 
-      {/* Модальное окно */}
+      {showHistory && (
+        loading ? <div className="text-center py-12 text-slate-500">Загрузка...</div> :
+        historyEntries.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">История пуста</p></div> :
+        <div className="card overflow-hidden opacity-75">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="table-header">
+                <tr>
+                  <th className="table-header-cell w-16">№</th>
+                  <th className="table-header-cell w-32">Номер комнаты</th>
+                  <th className="table-header-cell">Задача</th>
+                  <th className="table-header-cell w-40">Исполнитель</th>
+                  <th className="table-header-cell w-32">Автор</th>
+                  <th className="table-header-cell w-28">Статус</th>
+                  <th className="table-header-cell w-44">Удалена</th>
+                  <th className="table-header-cell w-24">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historyEntries.map((entry) => (
+                  <tr key={entry.id} className="table-row">
+                    <td className="table-cell text-slate-500">{entry.id}</td>
+                    <td className="table-cell font-mono text-sm">{entry.room_number || '—'}</td>
+                    <td className="table-cell">
+                      <p className="font-medium text-slate-800 dark:text-white">{entry.task}</p>
+                      {entry.comment && <p className="text-xs text-slate-400 mt-1">💬 {entry.comment}</p>}
+                    </td>
+                    <td className="table-cell">{entry.assignee || '—'}</td>
+                    <td className="table-cell whitespace-nowrap">{formatAuthorName(entry.author_name)}</td>
+                    <td className="table-cell">{getStatusBadge(entry.status)}</td>
+                    <td className="table-cell text-sm text-slate-500 whitespace-nowrap">{entry.deleted_at ? formatDate(entry.deleted_at) : '—'}</td>
+                    <td className="table-cell whitespace-nowrap">
+                      {isAdmin && <button onClick={() => handleRestore(entry.id)} className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm" title="Восстановить">↺</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <>
-          <div 
-            style={{ 
-              position: 'fixed', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              bottom: 0, 
-              backgroundColor: 'rgba(0, 0, 0, 0.5)', 
-              zIndex: 999999,
-              marginTop: 0 
-            }} 
-            onClick={() => setShowModal(false)} 
-          />
-          
-          <div 
-            style={{ 
-              position: 'fixed', 
-              top: '50%', 
-              left: '50%', 
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '24px',
-              width: '100%',
-              maxWidth: '600px',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              zIndex: 1000000
-            }}
-            className="dark:!bg-slate-800"
-          >
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 999999, marginTop: 0 }} onClick={() => setShowModal(false)} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'auto', zIndex: 1000000 }} className="dark:!bg-slate-800">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-slate-800 dark:text-white">
-                {editingEntry ? 'Редактировать задачу' : 'Новая задача'}
-              </h2>
+              <h2 className="text-xl font-semibold text-slate-800 dark:text-white">{editingEntry ? 'Редактировать задачу' : 'Новая задача'}</h2>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
-            
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="form-label">Номер комнаты</label>
-                <input
-                  type="text"
-                  value={formRoom}
-                  onChange={(e) => setFormRoom(e.target.value)}
-                  className="form-input"
-                  placeholder="Например: 1014, 2064..."
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Задача *</label>
-                <textarea
-                  value={formTask}
-                  onChange={(e) => setFormTask(e.target.value)}
-                  className="form-input"
-                  rows={3}
-                  placeholder="Опишите задачу..."
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Исполнитель</label>
-                <input
-                  type="text"
-                  value={formAssignee}
-                  onChange={(e) => setFormAssignee(e.target.value)}
-                  className="form-input"
-                  placeholder="Кто должен выполнить"
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Комментарий (необязательно)</label>
-                <textarea
-                  value={formComment}
-                  onChange={(e) => setFormComment(e.target.value)}
-                  className="form-input"
-                  rows={2}
-                  placeholder="Дополнительная информация..."
-                />
-              </div>
-
+              <div><label className="form-label">Номер комнаты</label><input type="text" value={formRoom} onChange={(e) => setFormRoom(e.target.value)} className="form-input" placeholder="Например: 1014, 2064..." /></div>
+              <div><label className="form-label">Задача *</label><textarea value={formTask} onChange={(e) => setFormTask(e.target.value)} className="form-input" rows={3} placeholder="Опишите задачу..." required /></div>
+              <div><label className="form-label">Исполнитель</label><input type="text" value={formAssignee} onChange={(e) => setFormAssignee(e.target.value)} className="form-input" placeholder="Кто должен выполнить" /></div>
+              <div><label className="form-label">Комментарий (необязательно)</label><textarea value={formComment} onChange={(e) => setFormComment(e.target.value)} className="form-input" rows={2} placeholder="Дополнительная информация..." /></div>
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="is_important"
-                  checked={formImportant}
-                  onChange={(e) => setFormImportant(e.target.checked)}
-                  className="w-4 h-4 text-amber-600 rounded"
-                />
-                <label htmlFor="is_important" className="form-label mb-0">
-                  Отметить как важную задачу (будет отображаться в отдельном блоке)
-                </label>
+                <input type="checkbox" id="is_important" checked={formImportant} onChange={(e) => setFormImportant(e.target.checked)} className="w-4 h-4 text-amber-600 rounded" />
+                <label htmlFor="is_important" className="form-label mb-0">Отметить как важную задачу (будет отображаться в отдельном блоке)</label>
               </div>
-
               <div className="flex justify-end gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-outline">
-                  Отмена
-                </button>
-                <button type="submit" className="btn-primary">
-                  {editingEntry ? 'Сохранить' : 'Создать'}
-                </button>
+                <button type="button" onClick={() => setShowModal(false)} className="btn-outline">Отмена</button>
+                <button type="submit" className="btn-primary">{editingEntry ? 'Сохранить' : 'Создать'}</button>
               </div>
             </form>
           </div>

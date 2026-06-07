@@ -149,3 +149,72 @@ async def delete_avatar(current_user: dict = Depends(get_current_user)):
                 os.remove(avatar_path)
             cursor.execute("UPDATE users SET avatar = NULL WHERE id = ?", (current_user["id"],))
     return {"message": "Аватар удалён"}
+
+@router.post("/forgot-password")
+async def forgot_password(email: str):
+    """Запрос на сброс пароля"""
+    import secrets
+    from datetime import datetime, timedelta
+    
+    user = get_user_by_email(email)
+    if not user:
+        return {"message": "Email не найден"}
+    
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now() + timedelta(hours=1)
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL,
+                token TEXT NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                used BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("DELETE FROM password_resets WHERE email = ?", (email,))
+        cursor.execute(
+            "INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)",
+            (email, token, expires_at)
+        )
+        conn.commit()
+    
+    reset_url = f"https://hotel-assistant.ru/reset-password?token={token}"
+    
+    return {"reset_url": reset_url, "token": token}
+
+@router.post("/reset-password")
+async def reset_password(token: str, new_password: str):
+    """Сброс пароля по токену"""
+    from datetime import datetime
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Проверяем токен
+        cursor.execute(
+            "SELECT * FROM password_resets WHERE token = ? AND used = 0 AND expires_at > ?",
+            (token, datetime.now())
+        )
+        reset = cursor.fetchone()
+        
+        if not reset:
+            raise HTTPException(400, "Недействительная или просроченная ссылка")
+        
+        # Хешируем новый пароль
+        hashed = hash_password(new_password)
+        
+        # Обновляем пароль пользователя
+        cursor.execute(
+            "UPDATE users SET password_hash = ? WHERE email = ?",
+            (hashed, reset["email"])
+        )
+        
+        # Помечаем токен как использованный
+        cursor.execute("UPDATE password_resets SET used = 1 WHERE id = ?", (reset["id"],))
+        conn.commit()
+    
+    return {"message": "Пароль успешно изменён"}

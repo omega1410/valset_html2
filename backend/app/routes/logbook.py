@@ -205,42 +205,31 @@ async def delete_log_entry(entry_id: int, user: dict = Depends(get_current_user)
 
 @router.post("/{entry_id}/complete")
 async def complete_task(entry_id: int, user: dict = Depends(get_current_user)):
-    """Отметить задачу как выполненную (только исполнитель или админ)"""
+    """Отметить задачу как выполненную или вернуть в работу (доступно всем авторизованным)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT assignee, author_id, status FROM logbook WHERE id = ?", (entry_id,)
+            "SELECT status FROM logbook WHERE id = ?", (entry_id,)
         )
         entry = cursor.fetchone()
 
         if not entry:
             raise HTTPException(404, "Запись не найдена")
 
+        # Переключаем статус
         if entry["status"] == "completed":
-            raise HTTPException(400, "Задача уже выполнена")
-
-        # Проверяем, что пользователь исполнитель, автор или админ
-        can_complete = (
-            entry["assignee"] == user["full_name"]
-            or entry["author_id"] == user["id"]
-            or user["role"] == "admin"
-        )
-
-        if not can_complete:
-            raise HTTPException(
-                403, "Только исполнитель, автор или админ может отметить задачу"
-            )
-
+            new_status = "pending"
+            completed_at = "NULL"
+        else:
+            new_status = "completed"
+            completed_at = "CURRENT_TIMESTAMP"
+        
         cursor.execute(
-            """
-            UPDATE logbook 
-            SET status = 'completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        """,
-            (entry_id,),
+            f"UPDATE logbook SET status = ?, completed_at = {completed_at} WHERE id = ?",
+            (new_status, entry_id)
         )
 
-    return {"message": "Задача отмечена как выполненная"}
+    return {"message": "Статус изменён", "status": new_status}
 
 
 @router.post("/{entry_id}/important")

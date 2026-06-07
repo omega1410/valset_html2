@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { sectionsService } from '../../services/sectionsService';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export const SectionDetail = () => {
   const { id } = useParams();
@@ -128,12 +130,10 @@ export const SectionDetail = () => {
             </div>
           )}
 
-          <div>
-            {section.content.split('\n').map((paragraph, idx) => (
-              <p key={idx} className="text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
-                {paragraph}
-              </p>
-            ))}
+          <div className="prose prose-slate dark:prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {section.content}
+            </ReactMarkdown>
           </div>
         </div>
       </div>

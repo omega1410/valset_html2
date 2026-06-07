@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { aiService } from '../../services/aiService';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -30,7 +32,6 @@ export const ChatWidget = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Закрытие по клику вне окна
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -86,7 +87,6 @@ export const ChatWidget = () => {
 
   return (
     <>
-      {/* Кнопка открытия чата */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-4 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-200 text-white"
@@ -99,13 +99,11 @@ export const ChatWidget = () => {
         <span className="text-sm font-medium whitespace-nowrap">Assistant GPT</span>
       </button>
 
-      {/* Окно чата */}
       {isOpen && (
         <div
           ref={modalRef}
           className="fixed bottom-20 right-6 w-96 h-[500px] bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 flex flex-col z-50"
         >
-          {/* Заголовок с крестиком */}
           <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-blue-600 text-white rounded-t-xl">
             <div className="flex justify-between items-center">
               <div>
@@ -124,10 +122,7 @@ export const ChatWidget = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="text-white/70 hover:text-white"
-                >
+                <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -136,7 +131,6 @@ export const ChatWidget = () => {
             </div>
           </div>
 
-          {/* Сообщения */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -145,7 +139,15 @@ export const ChatWidget = () => {
                     ? 'bg-blue-600 text-white' 
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white'
                 }`}>
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  {msg.role === 'assistant' ? (
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  )}
                 </div>
               </div>
             ))}
@@ -163,7 +165,6 @@ export const ChatWidget = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Ввод */}
           <div className="p-4 border-t border-slate-200 dark:border-slate-700">
             <div className="flex gap-2">
               <input

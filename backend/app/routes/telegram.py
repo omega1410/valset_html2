@@ -1,151 +1,121 @@
-from fastapi import APIRouter, Request, HTTPException
-from app.database import get_db_connection
-import os
-import logging
+from fastapi import APIRouter, Request
 import httpx
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
-
 BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 
-async def send_tg_message(chat_id: int, text: str):
-    """Отправка сообщения пользователю"""
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            await client.post(
-                url,
-                json={
-                    "chat_id": chat_id,
-                    "text": text,
-                    "parse_mode": "HTML",
-                    "disable_web_page_preview": True
-                }
-            )
-        except Exception as e:
-            logger.error(f"Failed to send message: {e}")
-
+# Хранилище email'ов пользователей (временное)
+user_emails = {}
 
 @router.post("/webhook")
 async def telegram_webhook(request: Request):
-    """Вебхук для Telegram бота"""
+    """Обработчик сообщений от Telegram"""
     try:
         data = await request.json()
-        logger.info(f"Telegram webhook received: {data}")
         
-        # Проверяем, что это сообщение
         if "message" not in data:
             return {"ok": True}
         
-        message = data["message"]
-        chat_id = message["chat"]["id"]
-        text = message.get("text", "")
+        chat_id = data["message"]["chat"]["id"]
+        text = data["message"].get("text", "").strip()
         
         # Команда /start
         if text == "/start":
-            await send_tg_message(
-                chat_id,
-                "🤖 <b>Hotel Assistant Bot</b>\n\n"
-                "Для привязки аккаунта отправьте ваш email, который используется в системе.\n\n"
-                "После привязки используйте команду /reset для сброса пароля."
+            await send_message(chat_id, 
+                "🤖 <b>Бот для сброса пароля Hotel Assistant</b>\n\n"
+                "Отправьте мне ваш email, который используете на сайте.\n"
+                "После этого вы сможете сбросить пароль командой /reset"
             )
-            return {"ok": True}
-        
-        # Привязка email (если пользователь отправил email)
-        if "@" in text and "." in text:
-            email = text.strip().lower()
-            
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE users SET telegram_chat_id = ? WHERE email = ?",
-                    (str(chat_id), email)
-                )
-                conn.commit()
-                
-                if cursor.rowcount > 0:
-                    await send_tg_message(
-                        chat_id,
-                        f"✅ <b>Аккаунт привязан!</b>\n\n"
-                        f"Email: {email}\n\n"
-                        f"Теперь вы можете использовать команду /reset для сброса пароля."
-                    )
-                else:
-                    await send_tg_message(
-                        chat_id,
-                        "❌ <b>Пользователь с таким email не найден</b>\n\n"
-                        "Попробуйте ещё раз или обратитесь к администратору."
-                    )
+            user_emails[str(chat_id)] = {"step": "awaiting_email"}
             return {"ok": True}
         
         # Команда /reset
         if text == "/reset":
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT email FROM users WHERE telegram_chat_id = ?",
-                    (str(chat_id),)
+            user_data = user_emails.get(str(chat_id))
+            if not user_data or not user_data.get("email"):
+                await send_message(chat_id, 
+                    "❌ Сначала отправьте ваш email командой /start"
                 )
-                user = cursor.fetchone()
-                
-                if not user:
-                    await send_tg_message(
-                        chat_id,
-                        "❌ <b>Аккаунт не привязан</b>\n\n"
-                        "Используйте команду /start для привязки."
-                    )
-                    return {"ok": True}
-                
-                # Генерируем токен сброса
-                import secrets
-                from datetime import datetime, timedelta
-                
-                token = secrets.token_urlsafe(32)
-                expires_at = datetime.now() + timedelta(hours=1)
-                
-                # Сохраняем токен в БД
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS password_resets (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        email TEXT NOT NULL,
-                        token TEXT NOT NULL UNIQUE,
-                        expires_at TIMESTAMP NOT NULL,
-                        used BOOLEAN DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                cursor.execute(
-                    "DELETE FROM password_resets WHERE email = ?",
-                    (user["email"],)
-                )
-                cursor.execute(
-                    "INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)",
-                    (user["email"], token, expires_at)
-                )
-                conn.commit()
+                return {"ok": True}
             
-            reset_url = f"https://hotel-assistant.ru/reset-password?token={token}"
+            email = user_data["email"]
             
-            await send_tg_message(
-                chat_id,
-                f"🔐 <b>Сброс пароля</b>\n\n"
-                f"Перейдите по ссылке для создания нового пароля:\n\n"
-                f"<a href='{reset_url}'>Сбросить пароль</a>\n\n"
-                f"⏰ Ссылка действительна 1 час."
-            )
+            # Запрашиваем сброс пароля через твой API
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"http://127.0.0.1:8000/api/auth/forgot-password",
+                    params={"email": email}
+                )
+                result = resp.json()
+            
+            if "reset_url" in result:
+                await send_message(chat_id,
+                    f"🔐 <b>Ссылка для сброса пароля</b>\n\n"
+                    f"{result['reset_url']}\n\n"
+                    f"⏰ Ссылка действительна 1 час.\n\n"
+                    f"⚠️ Никому не передавайте эту ссылку!"
+                )
+            else:
+                await send_message(chat_id, f"❌ {result.get('message', 'Ошибка')}")
+            
             return {"ok": True}
         
-        # Неизвестная команда
-        await send_tg_message(
-            chat_id,
-            "🤖 Доступные команды:\n"
-            "/start - начать работу\n"
-            "/reset - сбросить пароль"
+        # Обработка email (когда пользователь отправляет email)
+        user_data = user_emails.get(str(chat_id))
+        if user_data and user_data.get("step") == "awaiting_email" and "@" in text:
+            email = text.strip().lower()
+            
+            # Проверяем, есть ли такой email в системе
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"http://127.0.0.1:8000/api/auth/forgot-password",
+                    params={"email": email}
+                )
+                result = resp.json()
+            
+            if "reset_url" in result:
+                user_emails[str(chat_id)] = {"step": "ready", "email": email}
+                await send_message(chat_id,
+                    f"✅ Email <b>{email}</b> успешно привязан!\n\n"
+                    f"Теперь используйте команду /reset для сброса пароля."
+                )
+            else:
+                await send_message(chat_id, 
+                    f"❌ Email <b>{email}</b> не найден в системе.\n\n"
+                    f"Проверьте правильность email или обратитесь к администратору."
+                )
+            
+            return {"ok": True}
+        
+        # Если ничего не подошло
+        await send_message(chat_id, 
+            "🤖 Используйте /start для начала работы\n"
+            "Или /reset для сброса пароля (после привязки email)"
         )
-        return {"ok": True}
         
     except Exception as e:
-        logger.error(f"Telegram webhook error: {e}")
-        return {"ok": True}
+        print(f"Telegram webhook error: {e}")
+    
+    return {"ok": True}
+
+
+async def send_message(chat_id: int, text: str):
+    """Отправка сообщения в Telegram"""
+    if not BOT_TOKEN:
+        print("TG_BOT_TOKEN not set")
+        return
+    
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            await client.post(url, json={
+                "chat_id": chat_id,
+                "text": text,
+                "parse_mode": "HTML"
+            })
+        except Exception as e:
+            print(f"Failed to send message: {e}")
