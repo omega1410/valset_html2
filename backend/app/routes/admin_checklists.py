@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import Optional
 
 from app.auth import get_current_admin
 from app.database import get_db_connection
@@ -12,6 +12,7 @@ class ChecklistTaskCreate(BaseModel):
     shift_type: str
     task_text: str
     task_order: int
+    hint: Optional[str] = None
 
 
 @router.get("/checklists/tasks")
@@ -46,10 +47,10 @@ async def create_task(
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO checklist_tasks (shift_type, task_text, task_order)
-            VALUES (?, ?, ?)
+            INSERT INTO checklist_tasks (shift_type, task_text, task_order, hint)
+            VALUES (?, ?, ?, ?)
         """,
-            (task.shift_type, task.task_text, task.task_order),
+            (task.shift_type, task.task_text, task.task_order, task.hint),
         )
         task_id = cursor.lastrowid
     return {"id": task_id, **task.dict()}
@@ -65,10 +66,10 @@ async def update_task(
         cursor.execute(
             """
             UPDATE checklist_tasks 
-            SET shift_type = ?, task_text = ?, task_order = ?
+            SET shift_type = ?, task_text = ?, task_order = ?, hint = ?
             WHERE id = ?
         """,
-            (task.shift_type, task.task_text, task.task_order, task_id),
+            (task.shift_type, task.task_text, task.task_order, task.hint, task_id),
         )
 
         if cursor.rowcount == 0:
@@ -124,25 +125,22 @@ async def reset_default_tasks(admin: dict = Depends(get_current_admin)):
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        # Удаляем старые задачи
         cursor.execute("DELETE FROM checklist_tasks")
 
-        # Добавляем дневные задачи
         for i, task in enumerate(default_tasks_day, 1):
             cursor.execute(
                 """
-                INSERT INTO checklist_tasks (shift_type, task_text, task_order)
-                VALUES ('day', ?, ?)
+                INSERT INTO checklist_tasks (shift_type, task_text, task_order, hint)
+                VALUES ('day', ?, ?, NULL)
             """,
                 (task, i),
             )
 
-        # Добавляем ночные задачи
         for i, task in enumerate(default_tasks_night, 1):
             cursor.execute(
                 """
-                INSERT INTO checklist_tasks (shift_type, task_text, task_order)
-                VALUES ('night', ?, ?)
+                INSERT INTO checklist_tasks (shift_type, task_text, task_order, hint)
+                VALUES ('night', ?, ?, NULL)
             """,
                 (task, i),
             )

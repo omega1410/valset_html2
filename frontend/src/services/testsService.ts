@@ -11,13 +11,26 @@ export const testsService = {
     return response.data;
   },
   
-  submitTest: async (id: number, answers: number[]) => {
-    const response = await api.post(`/tests/${id}/submit`, { answers });
+  submitTest: async (id: number, answers: number[], timeSpent?: number) => {
+    const response = await api.post(`/tests/${id}/submit`, { 
+      answers, 
+      time_spent: timeSpent 
+    });
     return response.data;
   },
 
   getTestPaged: async (id: number, page: number = 1, limit: number = 5) => {
     const response = await api.get(`/tests/${id}/paged?page=${page}&limit=${limit}`);
     return response.data;
-},
+  },
+  
+  getTestAttempts: async (id: number) => {
+    const response = await api.get(`/tests/${id}/attempts`);
+    return response.data;
+  },
+  
+  getAttemptDetails: async (testId: number, attemptId: number) => {
+    const response = await api.get(`/tests/${testId}/attempt/${attemptId}`);
+    return response.data;
+  },
 };

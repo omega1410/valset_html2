@@ -18,8 +18,11 @@ export interface LogEntry {
 }
 
 export const logbookService = {
-  getAll: async (status?: string) => {
-    const url = status ? `/logbook/?status=${status}` : '/logbook/';
+  getAll: async (status?: string, search?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (search) params.append('search', search);
+    const url = params.toString() ? `/logbook/?${params}` : '/logbook/';
     const response = await api.get(url);
     return response.data;
   },
@@ -34,8 +37,9 @@ export const logbookService = {
     return response.data;
   },
   
-  getHistory: async () => {
-    const response = await api.get('/logbook/history');
+  getHistory: async (search?: string) => {
+    const params = search ? `?search=${encodeURIComponent(search)}` : '';
+    const response = await api.get(`/logbook/history${params}`);
     return response.data;
   },
   

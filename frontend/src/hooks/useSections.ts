@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { sectionsService } from '../services/sectionsService';
 
-export const useSections = (page = 1, limit = 10) => {
+export const useSections = (page = 1, limit = 12) => {
   return useQuery({
     queryKey: ['sections', page, limit],
     queryFn: () => sectionsService.getSections(page, limit),
@@ -22,7 +22,7 @@ export const useSearchSections = (query: string) => {
   return useQuery({
     queryKey: ['sections-search', query],
     queryFn: () => sectionsService.searchSections(query),
-    enabled: query.length >= 2, // искать только если 2+ символа
+    enabled: query.length >= 2,
     staleTime: 60 * 1000,
   });
 };

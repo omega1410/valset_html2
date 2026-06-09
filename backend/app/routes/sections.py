@@ -36,7 +36,7 @@ async def search_sections(
 
 @router.get("/")
 async def get_sections(
-    page: int = 1, limit: int = 10, user: dict = Depends(get_current_user)
+    page: int = 1, limit: int = 100, user: dict = Depends(get_current_user)
 ) -> dict:
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -73,6 +73,16 @@ async def get_section(
     """Получить один раздел по ID"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        
+        # Записываем просмотр раздела (если ещё не было)
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO section_views (user_id, section_id, viewed_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            """,
+            (user["id"], section_id),
+        )
+        
         cursor.execute(
             """
             SELECT id, title, content, photo_id, photo_id2, photo_id3, photo_id4, photo_id5, photo_id6, photo_id7

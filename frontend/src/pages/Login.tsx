@@ -7,9 +7,15 @@ import toast from 'react-hot-toast';
 import { authService } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
 
+// Обновленная схема с проверкой на запрещенные символы
 const loginSchema = z.object({
   email: z.string().email('Неверный формат email'),
-  password: z.string().min(1, 'Введите пароль'),
+  password: z.string()
+    .min(1, 'Введите пароль')
+    .refine(
+      (val) => !/[+&?#%]/.test(val),
+      { message: 'Пароль не должен содержать символы: + & ? # %' }
+    ),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -187,7 +193,10 @@ export const Login = () => {
                   )}
                 </button>
               </div>
-              {errors.password && <p className="text-red-300 text-xs mt-1">{errors.password.message}</p>}
+              {errors.password && (
+                <p className="text-red-300 text-xs mt-1">{errors.password.message}</p>
+              )}
+              <p className="text-white/40 text-xs mt-1">Пароль не должен содержать символы: + & ? # %</p>
             </div>
 
             <button
@@ -205,6 +214,15 @@ export const Login = () => {
               )}
             </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => setForgotPasswordMode(true)}
+              className="text-sm text-white/50 hover:text-white/70 transition"
+            >
+              Забыли пароль?
+            </button>
+          </div>
 
           <div className="mt-6 pt-4 border-t border-white/30 text-center">
             <p className="text-xs text-white/50">Система адаптации сотрудников</p>

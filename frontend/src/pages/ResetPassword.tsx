@@ -14,6 +14,7 @@ export const ResetPassword = () => {
   const [submitted, setSubmitted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -21,16 +22,33 @@ export const ResetPassword = () => {
     }
   }, [token]);
 
+  const validatePassword = (password: string) => {
+    if (password.length < 4) {
+      return 'Пароль должен быть не менее 4 символов';
+    }
+    if (/[+&?#%]/.test(password)) {
+      return 'Пароль не должен содержать символы: + & ? # %';
+    }
+    return null;
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewPassword(value);
+    setPasswordError(validatePassword(value) || '');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (newPassword !== confirmPassword) {
-      toast.error('Пароли не совпадают');
+    const error = validatePassword(newPassword);
+    if (error) {
+      toast.error(error);
       return;
     }
     
-    if (newPassword.length < 4) {
-      toast.error('Пароль должен быть не менее 4 символов');
+    if (newPassword !== confirmPassword) {
+      toast.error('Пароли не совпадают');
       return;
     }
     
@@ -134,11 +152,10 @@ export const ResetPassword = () => {
                 <input
                   type={showPassword ? "text" : "password"}
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-white/50 focus:border-white/50 outline-none transition text-white placeholder-white/50 text-base pr-12"
                   placeholder="Введите новый пароль"
                   required
-                  minLength={4}
                 />
                 <button
                   type="button"
@@ -157,7 +174,10 @@ export const ResetPassword = () => {
                   )}
                 </button>
               </div>
-              <p className="text-white/50 text-xs mt-1">Минимум 4 символа</p>
+              {passwordError && (
+                <p className="text-red-300 text-xs mt-1">{passwordError}</p>
+              )}
+              <p className="text-white/40 text-xs mt-1">Минимум 4 символа. Нельзя использовать: + & ? # %</p>
             </div>
 
             <div>

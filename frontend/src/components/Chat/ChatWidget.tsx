@@ -161,7 +161,7 @@ export const ChatWidget = () => {
                   </div>
                 </div>
               </div>
-            )}
+            )}               
             <div ref={messagesEndRef} />
           </div>
 

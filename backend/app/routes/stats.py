@@ -31,14 +31,16 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
         )
         test_attempts = cursor.fetchone()["total_test_attempts"]
 
-        cursor.execute(
-            """
-            SELECT AVG(CAST(correct_answers AS FLOAT) / total_questions) * 100 as avg_score
-            FROM test_stats
-            WHERE user_id = ? AND section_id != 0
-            """,
-            (user["id"],),
-        )
+        cursor.execute("""
+            SELECT AVG(percentage) as avg_score
+            FROM (
+                SELECT DISTINCT test_id, 
+                       MAX(score) as percentage
+                FROM test_attempts
+                WHERE user_id = ? AND test_id != 0
+                GROUP BY test_id
+            )
+        """, (user["id"],))
         avg_score = cursor.fetchone()["avg_score"] or 0
 
         cursor.execute(
@@ -51,14 +53,11 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
         )
         completed_checklists = cursor.fetchone()["completed_checklists"] or 0
 
-        cursor.execute(
-            """
-            SELECT COUNT(DISTINCT section_id) as viewed_sections
-            FROM test_stats
-            WHERE user_id = ? AND section_id != 0
-            """,
-            (user["id"],),
-        )
+        cursor.execute("""
+            SELECT COUNT(*) as viewed_sections
+            FROM section_views
+            WHERE user_id = ?
+        """, (user["id"],))
         viewed_sections = cursor.fetchone()["viewed_sections"] or 0
 
         cursor.execute(

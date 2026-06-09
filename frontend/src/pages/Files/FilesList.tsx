@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { filesService } from '../../services/filesService';
 import toast from 'react-hot-toast';
-import { SkeletonLoader } from '../../components/SkeletonLoader';
+import { FilesSkeleton } from '../../components/SkeletonLoader';
+import { useMobile } from '../../hooks/useMobile';
 
 export const FilesList = () => {
   const [files, setFiles] = useState<any[]>([]);
   const [filteredFiles, setFilteredFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const isMobile = useMobile();
 
   useEffect(() => {
     loadFiles();
@@ -66,6 +68,34 @@ export const FilesList = () => {
     }
   };
 
+  // Мобильная карточка файла
+  const MobileFileCard = ({ file }: { file: any }) => (
+    <div className="bg-white dark:bg-slate-800 rounded-lg p-4 mb-3 shadow-sm border border-slate-200 dark:border-slate-700">
+      <div className="flex items-start gap-3">
+        <div className="text-3xl">{getFileIcon(file.name)}</div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-slate-800 dark:text-white text-sm break-words">{file.name}</h3>
+          <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+            <span>{getFileType(file.name)}</span>
+            <span>{formatFileSize(file.size)}</span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+        <a
+          href={filesService.getDownloadUrl(file.name)}
+          download
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition active:scale-95"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Скачать
+        </a>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -93,7 +123,7 @@ export const FilesList = () => {
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -110,9 +140,7 @@ export const FilesList = () => {
       )}
 
       {loading ? (
-        <div className="card p-6">
-          <SkeletonLoader />
-        </div>
+        <FilesSkeleton />
       ) : filteredFiles.length === 0 ? (
         <div className="card p-12 text-center">
           <p className="text-slate-500 dark:text-slate-400">
@@ -126,6 +154,12 @@ export const FilesList = () => {
               Очистить поиск
             </button>
           )}
+        </div>
+      ) : isMobile ? (
+        <div className="space-y-3">
+          {filteredFiles.map((file, index) => (
+            <MobileFileCard key={index} file={file} />
+          ))}
         </div>
       ) : (
         <div className="card overflow-hidden">

@@ -79,7 +79,7 @@ export const WeatherWidget = () => {
   const iconUrl = `https://openweathermap.org/img/wn/${weather.icon}@2x.png`;
 
   return (
-    <div className="bg-slate-800/90 rounded-2xl px-5 py-3 shadow-xl border border-slate-600">
+    <div className="bg-slate-800/90 rounded-2xl px-5 py-3 shadow-xl border border-slate-600 inline-block">
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
           <img 

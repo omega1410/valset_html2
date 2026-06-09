@@ -43,21 +43,35 @@ class LogEntryResponse(BaseModel):
 
 @router.get("/")
 async def get_logbook_entries(
-    status: Optional[str] = None, user: dict = Depends(get_current_user)
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    user: dict = Depends(get_current_user)
 ):
+    """Получить записи логбука с поиском (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-
+        
+        query = "SELECT * FROM logbook WHERE is_deleted = 0"
+        params = []
+        
         if status:
-            cursor.execute(
-                "SELECT * FROM logbook WHERE status = ? AND is_deleted = 0 ORDER BY created_at DESC",
-                (status,),
-            )
-        else:
-            cursor.execute(
-                "SELECT * FROM logbook WHERE is_deleted = 0 ORDER BY created_at DESC"
-            )
-
+            query += " AND status = ?"
+            params.append(status)
+        
+        if search and search.strip():
+            search_term = f"%{search}%"
+            query += """ AND (
+                task LIKE ? OR 
+                room_number LIKE ? OR 
+                assignee LIKE ? OR 
+                author_name LIKE ? OR 
+                comment LIKE ?
+            )"""
+            params.extend([search_term] * 5)
+        
+        query += " ORDER BY is_important DESC, created_at DESC"
+        
+        cursor.execute(query, params)
         entries = cursor.fetchall()
 
     return [dict(e) for e in entries]
@@ -65,6 +79,7 @@ async def get_logbook_entries(
 
 @router.get("/my")
 async def get_my_entries(user: dict = Depends(get_current_user)):
+    """Получить только свои записи (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -78,6 +93,7 @@ async def get_my_entries(user: dict = Depends(get_current_user)):
 
 @router.get("/important")
 async def get_important_entries(user: dict = Depends(get_current_user)):
+    """Получить важные задачи (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -92,9 +108,10 @@ async def get_important_entries(user: dict = Depends(get_current_user)):
 
 @router.post("/", response_model=LogEntryResponse)
 async def create_log_entry(
-    entry: LogEntryCreate, user: dict = Depends(get_current_user)
+    entry: LogEntryCreate, 
+    user: dict = Depends(get_current_user)
 ):
-    """Создать новую запись в логбуке"""
+    """Создать новую запись в логбуке (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -122,25 +139,26 @@ async def create_log_entry(
 
 @router.put("/{entry_id}")
 async def update_log_entry(
-    entry_id: int, entry_update: LogEntryUpdate, user: dict = Depends(get_current_user)
+    entry_id: int, 
+    entry_update: LogEntryUpdate, 
+    user: dict = Depends(get_current_user)
 ):
-    """Обновить запись (только автор или админ)"""
+    """Обновить запись (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT author_id, status FROM logbook WHERE id = ?", (entry_id,)
-        )
+        cursor.execute("SELECT status, is_deleted FROM logbook WHERE id = ?", (entry_id,))
         entry = cursor.fetchone()
 
         if not entry:
             raise HTTPException(404, "Запись не найдена")
+        
+        # Нельзя редактировать удалённые записи
+        if entry["is_deleted"]:
+            raise HTTPException(400, "Нельзя редактировать удалённую запись")
 
         # Нельзя редактировать выполненные задачи
         if entry["status"] == "completed":
             raise HTTPException(400, "Нельзя редактировать выполненную задачу")
-
-        if entry["author_id"] != user["id"] and user["role"] != "admin":
-            raise HTTPException(403, "Нет прав на редактирование")
 
         updates = []
         values = []
@@ -170,7 +188,8 @@ async def update_log_entry(
             updates.append("updated_at = CURRENT_TIMESTAMP")
             values.append(entry_id)
             cursor.execute(
-                f"UPDATE logbook SET {', '.join(updates)} WHERE id = ?", values
+                f"UPDATE logbook SET {', '.join(updates)} WHERE id = ?", 
+                values
             )
 
     return {"message": "Запись обновлена"}
@@ -178,17 +197,17 @@ async def update_log_entry(
 
 @router.delete("/{entry_id}")
 async def delete_log_entry(entry_id: int, user: dict = Depends(get_current_user)):
-    """Переместить запись в архив (только автор или админ)"""
+    """Переместить запись в архив (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT author_id FROM logbook WHERE id = ?", (entry_id,))
+        cursor.execute("SELECT id, is_deleted FROM logbook WHERE id = ?", (entry_id,))
         entry = cursor.fetchone()
 
         if not entry:
             raise HTTPException(404, "Запись не найдена")
-
-        if entry["author_id"] != user["id"] and user["role"] != "admin":
-            raise HTTPException(403, "Нет прав на удаление")
+        
+        if entry["is_deleted"]:
+            raise HTTPException(400, "Запись уже в архиве")
 
         # Помечаем как удалённое
         cursor.execute(
@@ -205,71 +224,92 @@ async def delete_log_entry(entry_id: int, user: dict = Depends(get_current_user)
 
 @router.post("/{entry_id}/complete")
 async def complete_task(entry_id: int, user: dict = Depends(get_current_user)):
-    """Отметить задачу как выполненную или вернуть в работу (доступно всем авторизованным)"""
+    """Отметить задачу как выполненную или вернуть в работу (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT status FROM logbook WHERE id = ?", (entry_id,)
-        )
+        cursor.execute("SELECT status, is_deleted FROM logbook WHERE id = ?", (entry_id,))
         entry = cursor.fetchone()
 
         if not entry:
             raise HTTPException(404, "Запись не найдена")
+        
+        if entry["is_deleted"]:
+            raise HTTPException(400, "Нельзя изменять статус удалённой записи")
 
         # Переключаем статус
         if entry["status"] == "completed":
             new_status = "pending"
             completed_at = "NULL"
+            message = "Задача возвращена в работу"
         else:
             new_status = "completed"
             completed_at = "CURRENT_TIMESTAMP"
+            message = "Задача выполнена"
         
         cursor.execute(
             f"UPDATE logbook SET status = ?, completed_at = {completed_at} WHERE id = ?",
             (new_status, entry_id)
         )
 
-    return {"message": "Статус изменён", "status": new_status}
+    return {"message": message, "status": new_status}
 
 
 @router.post("/{entry_id}/important")
 async def toggle_important(entry_id: int, user: dict = Depends(get_current_user)):
-    """Переключить важность задачи (только админ или автор)"""
+    """Переключить важность задачи (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT author_id, is_important, status FROM logbook WHERE id = ?",
-            (entry_id,),
-        )
+        cursor.execute("SELECT status, is_deleted FROM logbook WHERE id = ?", (entry_id,))
         entry = cursor.fetchone()
 
         if not entry:
             raise HTTPException(404, "Запись не найдена")
+        
+        if entry["is_deleted"]:
+            raise HTTPException(400, "Нельзя менять важность удалённой записи")
 
         if entry["status"] == "completed":
             raise HTTPException(400, "Нельзя менять важность выполненной задачи")
 
-        if entry["author_id"] != user["id"] and user["role"] != "admin":
-            raise HTTPException(403, "Нет прав")
-
-        new_value = 0 if entry["is_important"] else 1
+        # Получаем текущее значение is_important
+        cursor.execute("SELECT is_important FROM logbook WHERE id = ?", (entry_id,))
+        current = cursor.fetchone()
+        new_value = 0 if current["is_important"] else 1
+        
         cursor.execute(
-            "UPDATE logbook SET is_important = ? WHERE id = ?", (new_value, entry_id)
+            "UPDATE logbook SET is_important = ? WHERE id = ?", 
+            (new_value, entry_id)
         )
 
     return {"is_important": new_value, "message": "Статус важности обновлён"}
 
 
 @router.get("/history")
-async def get_deleted_entries(user: dict = Depends(get_current_user)):
-    """Получить архивные (удалённые) записи"""
+async def get_deleted_entries(
+    search: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Получить архивные (удалённые) записи с поиском (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT * FROM logbook 
-            WHERE is_deleted = 1 
-            ORDER BY deleted_at DESC
-        """)
+        
+        query = "SELECT * FROM logbook WHERE is_deleted = 1"
+        params = []
+        
+        if search and search.strip():
+            search_term = f"%{search}%"
+            query += """ AND (
+                task LIKE ? OR 
+                room_number LIKE ? OR 
+                assignee LIKE ? OR 
+                author_name LIKE ? OR 
+                comment LIKE ?
+            )"""
+            params.extend([search_term] * 5)
+        
+        query += " ORDER BY deleted_at DESC"
+        
+        cursor.execute(query, params)
         entries = cursor.fetchall()
 
     return [dict(e) for e in entries]
@@ -277,12 +317,21 @@ async def get_deleted_entries(user: dict = Depends(get_current_user)):
 
 @router.post("/{entry_id}/restore")
 async def restore_log_entry(entry_id: int, user: dict = Depends(get_current_user)):
-    """Восстановить запись из архива (только админ)"""
-    if user["role"] != "admin":
-        raise HTTPException(403, "Доступ запрещён")
-
+    """Восстановить запись из архива (доступно всем)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        
+        # Проверяем, что запись существует и удалена
+        cursor.execute("SELECT is_deleted FROM logbook WHERE id = ?", (entry_id,))
+        entry = cursor.fetchone()
+        
+        if not entry:
+            raise HTTPException(404, "Запись не найдена")
+        
+        if not entry["is_deleted"]:
+            raise HTTPException(400, "Запись не находится в архиве")
+        
+        # Восстанавливаем
         cursor.execute(
             """
             UPDATE logbook 

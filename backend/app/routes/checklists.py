@@ -55,7 +55,7 @@ async def get_checklist(shift_type: str, user: dict = Depends(get_current_user))
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT * FROM checklist_tasks WHERE shift_type = ? ORDER BY task_order",
+            "SELECT id, task_text, task_order, hint FROM checklist_tasks WHERE shift_type = ? ORDER BY task_order",
             (shift_type,),
         )
         tasks = cursor.fetchall()
@@ -81,6 +81,7 @@ async def get_checklist(shift_type: str, user: dict = Depends(get_current_user))
                 "text": task["task_text"],
                 "order": task["task_order"],
                 "is_done": progress.get(task["id"], False),
+                "hint": task["hint"] if task["hint"] else None,
             }
         )
 
@@ -115,7 +116,7 @@ async def toggle_task(
             (user["id"], shift_type, task.task_id, task.is_done),
         )
 
-        # 2. ОДНИМ ЗАПРОСОМ проверяем, все ли задачи выполнены
+        # 2. Проверяем, все ли задачи выполнены
         cursor.execute(
             """
             SELECT 

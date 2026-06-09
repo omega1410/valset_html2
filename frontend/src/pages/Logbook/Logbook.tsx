@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { logbookService, type LogEntry } from '../../services/logbookService';
 import toast from 'react-hot-toast';
+import { debounce } from 'lodash';
+import { useMobile } from '../../hooks/useMobile';
+import { MobileLogbookCard } from '../../components/MobileCards/MobileLogbookCard';
 
 export const Logbook = () => {
   const { user, isAdmin } = useAuthStore();
@@ -14,6 +17,8 @@ export const Logbook = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [showMyOnly, setShowMyOnly] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   
   const [formRoom, setFormRoom] = useState('');
   const [formTask, setFormTask] = useState('');
@@ -21,15 +26,24 @@ export const Logbook = () => {
   const [formComment, setFormComment] = useState('');
   const [formImportant, setFormImportant] = useState(false);
 
-  const formatAuthorName = (fullName: string) => {
-    if (!fullName || fullName === '—') return '—';
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    const firstName = parts[0];
-    const lastName = parts[parts.length - 1];
-    const lastNameInitial = lastName.charAt(0);
-    return `${firstName} ${lastNameInitial}.`;
-  };
+  const isMobile = useMobile();
+
+  // Дебаунс поиска (ждём 300мс после последнего ввода)
+  const debouncedSetSearch = useRef(
+    debounce((value: string) => {
+      setDebouncedSearch(value);
+    }, 300)
+  ).current;
+
+  useEffect(() => {
+    return () => {
+      debouncedSetSearch.cancel();
+    };
+  }, [debouncedSetSearch]);
+
+  useEffect(() => {
+    debouncedSetSearch(searchQuery);
+  }, [searchQuery, debouncedSetSearch]);
 
   useEffect(() => {
     if (showHistory) {
@@ -38,7 +52,7 @@ export const Logbook = () => {
       loadEntries();
       loadImportantEntries();
     }
-  }, [filter, showMyOnly, showHistory]);
+  }, [filter, showMyOnly, showHistory, debouncedSearch]);
 
   const loadEntries = async () => {
     setLoading(true);
@@ -47,7 +61,7 @@ export const Logbook = () => {
       if (showMyOnly && !isAdmin) {
         data = await logbookService.getMy();
       } else {
-        data = await logbookService.getAll(filter === 'all' ? undefined : filter);
+        data = await logbookService.getAll(filter === 'all' ? undefined : filter, debouncedSearch || undefined);
       }
       setEntries(data);
     } catch (error) {
@@ -70,7 +84,7 @@ export const Logbook = () => {
   const loadHistory = async () => {
     setLoading(true);
     try {
-      const data = await logbookService.getHistory();
+      const data = await logbookService.getHistory(debouncedSearch || undefined);
       setHistoryEntries(data);
     } catch (error) {
       console.error('Ошибка загрузки истории:', error);
@@ -171,12 +185,9 @@ export const Logbook = () => {
       try {
         await logbookService.restore(id);
         toast.success('Запись восстановлена');
-        if (showHistory) {
-          loadHistory();
-        } else {
-          loadEntries();
-          loadImportantEntries();
-        }
+        loadHistory();
+        loadEntries();
+        loadImportantEntries();
       } catch (error) {
         toast.error('Ошибка восстановления');
       }
@@ -200,10 +211,8 @@ export const Logbook = () => {
     return date.toLocaleString('ru-RU', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+      minute: '2-digit'
     });
   };
 
@@ -211,12 +220,66 @@ export const Logbook = () => {
     if (status === 'completed') {
       return <span className="inline-block px-2 py-1 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 whitespace-nowrap">✓ Выполнено</span>;
     }
-    return <span className="inline-block px-2 py-1 text-xs rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 whitespace-nowrap">⏳ В работе</span>;
+    return <span className="inline-block px-2 py-1 text-xs rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 whitespace-nowrap">⟳ В работе</span>;
   };
+
+  // Компонент таблицы (для десктопа)
+  const LogbookTableComponent = ({ entries, showActions = true, isHistory = false }) => (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-slate-50 dark:bg-slate-700/50">
+          <tr>
+            <th className="px-4 py-3 text-left text-sm">№</th>
+            <th className="px-4 py-3 text-left text-sm">Комната</th>
+            <th className="px-4 py-3 text-left text-sm">Задача</th>
+            <th className="px-4 py-3 text-left text-sm">Исполнитель</th>
+            <th className="px-4 py-3 text-left text-sm">Автор</th>
+            <th className="px-4 py-3 text-left text-sm">Статус</th>
+            <th className="px-4 py-3 text-left text-sm">Дата</th>
+            {showActions && <th className="px-4 py-3 text-left text-sm">Действия</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr key={entry.id} className="border-b hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <td className="px-4 py-3 text-sm">{entry.id}</td>
+              <td className="px-4 py-3 text-sm">{entry.room_number || '—'}</td>
+              <td className="px-4 py-3">
+                <div>
+                  <p className="font-medium">{entry.task}</p>
+                  {entry.comment && <p className="text-xs text-slate-400 mt-1">💬 {entry.comment}</p>}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-sm">{entry.assignee || '—'}</td>
+              <td className="px-4 py-3 text-sm">{entry.author_name}</td>
+              <td className="px-4 py-3">{getStatusBadge(entry.status)}</td>
+              <td className="px-4 py-3 text-sm">{formatDate(entry.created_at)}</td>
+              {showActions && (
+                <td className="px-4 py-3">
+                  <div className="flex gap-1">
+                    <button onClick={() => handleComplete(entry.id)} className="p-1 text-emerald-600 hover:text-emerald-700" title={entry.status === 'completed' ? 'Вернуть в работу' : 'Отметить выполненным'}>
+                      {entry.status === 'completed' ? '↺' : '✓'}
+                    </button>
+                    <button onClick={() => handleToggleImportant(entry.id)} className="p-1 text-amber-600 hover:text-amber-700" title={entry.is_important ? 'Снять важность' : 'Отметить важным'}>
+                      {entry.is_important ? '★' : '☆'}
+                    </button>
+                    {entry.status !== 'completed' && (
+                      <button onClick={() => openEditModal(entry)} className="p-1 text-blue-600 hover:text-blue-700" title="Редактировать">✎</button>
+                    )}
+                    <button onClick={() => handleDelete(entry.id)} className="p-1 text-red-600 hover:text-red-700" title="Удалить">✕</button>
+                  </div>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="page-title">Логбук</h1>
           <p className="page-subtitle">Журнал задач и поручений</p>
@@ -224,6 +287,34 @@ export const Logbook = () => {
         <button onClick={openCreateModal} className="btn-primary">+ Новая задача</button>
       </div>
 
+      {/* Поиск */}
+      <div className="relative">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Поиск по задачам, комнатам, исполнителям, авторам, комментариям..."
+          className="w-full px-4 py-3 pl-11 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition dark:bg-slate-800 dark:text-white"
+        />
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* Важные задачи */}
       {!showHistory && importantEntries.length > 0 && (
         <div className="card overflow-hidden border-l-4 border-l-amber-500">
           <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800">
@@ -232,60 +323,30 @@ export const Logbook = () => {
               <h2 className="font-semibold text-amber-800 dark:text-amber-400">Важные задачи</h2>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="table-header">
-                <tr>
-                  <th className="table-header-cell w-16">№</th>
-                  <th className="table-header-cell w-32">Номер комнаты</th>
-                  <th className="table-header-cell">Задача</th>
-                  <th className="table-header-cell w-40">Исполнитель</th>
-                  <th className="table-header-cell w-40">Автор</th>
-                  <th className="table-header-cell w-28">Статус</th>
-                  <th className="table-header-cell w-44">Дата</th>
-                  <th className="table-header-cell w-32">Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {importantEntries.map((entry) => (
-                  <tr key={entry.id} className="table-row bg-amber-50/30 dark:bg-amber-900/10">
-                    <td className="table-cell text-slate-500">{entry.id}</td>
-                    <td className="table-cell font-mono text-sm">{entry.room_number || '—'}</td>
-                    <td className="table-cell">
-                      <div className="flex items-center gap-2">
-                        <span className="text-amber-500">⭐</span>
-                        <p className="font-medium text-slate-800 dark:text-white">{entry.task}</p>
-                      </div>
-                      {entry.comment && <p className="text-xs text-slate-400 mt-1 ml-5">💬 {entry.comment}</p>}
-                    </td>
-                    <td className="table-cell">{entry.assignee || '—'}</td>
-                    <td className="table-cell whitespace-nowrap">{formatAuthorName(entry.author_name)}</td>
-                    <td className="table-cell">{getStatusBadge(entry.status)}</td>
-                    <td className="table-cell text-sm text-slate-500 whitespace-nowrap">{formatDate(entry.created_at)}</td>
-                    <td className="table-cell whitespace-nowrap">
-                      <div className="flex gap-1">
-                        <button onClick={() => handleComplete(entry.id)} className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm" title={entry.status === 'completed' ? 'Вернуть в работу' : 'Отметить выполненным'}>
-                          {entry.status === 'completed' ? '↺' : '✓'}
-                        </button>
-                        {(entry.author_id === user?.id || isAdmin) && entry.status !== 'completed' && (
-                          <button onClick={() => openEditModal(entry)} className="w-7 h-7 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 flex items-center justify-center text-sm" title="Редактировать">✎</button>
-                        )}
-                        <button onClick={() => handleToggleImportant(entry.id)} className="w-7 h-7 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 flex items-center justify-center text-sm" title="Снять отметку важности">⭐</button>
-                        {(entry.author_id === user?.id || isAdmin) && (
-                          <button onClick={() => handleDelete(entry.id)} className="w-7 h-7 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 flex items-center justify-center text-sm" title="Удалить">✕</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {isMobile ? (
+            <div className="p-4 space-y-3">
+              {importantEntries.map((entry) => (
+                <MobileLogbookCard
+                  key={entry.id}
+                  entry={entry}
+                  onComplete={handleComplete}
+                  onToggleImportant={handleToggleImportant}
+                  onEdit={openEditModal}
+                  onDelete={handleDelete}
+                  currentUserId={user?.id}
+                  isAdmin={isAdmin}
+                />
+              ))}
+            </div>
+          ) : (
+            <LogbookTableComponent entries={importantEntries} />
+          )}
         </div>
       )}
 
+      {/* Фильтры */}
       <div className="flex gap-4 flex-wrap items-center justify-between">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={() => { setShowHistory(false); setFilter('all'); }} className={`px-3 py-1 rounded-lg text-sm transition ${!showHistory && filter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>Все</button>
           <button onClick={() => { setShowHistory(false); setFilter('pending'); }} className={`px-3 py-1 rounded-lg text-sm transition ${!showHistory && filter === 'pending' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>В работе</button>
           <button onClick={() => { setShowHistory(false); setFilter('completed'); }} className={`px-3 py-1 rounded-lg text-sm transition ${!showHistory && filter === 'completed' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>Выполненные</button>
@@ -296,118 +357,126 @@ export const Logbook = () => {
         )}
       </div>
 
+      {/* Основной список */}
       {!showHistory && (
-        loading ? <div className="text-center py-12 text-slate-500">Загрузка...</div> :
-        entries.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">Нет записей</p></div> :
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="table-header">
-                <tr>
-                  <th className="table-header-cell w-16">№</th>
-                  <th className="table-header-cell w-32">Номер комнаты</th>
-                  <th className="table-header-cell">Задача</th>
-                  <th className="table-header-cell w-40">Исполнитель</th>
-                  <th className="table-header-cell w-32">Автор</th>
-                  <th className="table-header-cell w-28">Статус</th>
-                  <th className="table-header-cell w-44">Дата</th>
-                  <th className="table-header-cell w-32">Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.filter(e => !e.is_important).map((entry) => (
-                  <tr key={entry.id} className="table-row">
-                    <td className="table-cell text-slate-500">{entry.id}</td>
-                    <td className="table-cell font-mono text-sm">{entry.room_number || '—'}</td>
-                    <td className="table-cell">
-                      <div className="max-w-md">
-                        <p className="font-medium text-slate-800 dark:text-white">{entry.task}</p>
-                        {entry.comment && <p className="text-xs text-slate-400 mt-1">💬 {entry.comment}</p>}
-                      </div>
-                    </td>
-                    <td className="table-cell">{entry.assignee || '—'}</td>
-                    <td className="table-cell whitespace-nowrap">{formatAuthorName(entry.author_name)}</td>
-                    <td className="table-cell">{getStatusBadge(entry.status)}</td>
-                    <td className="table-cell text-sm text-slate-500 whitespace-nowrap">{formatDate(entry.created_at)}</td>
-                    <td className="table-cell whitespace-nowrap">
-                      <div className="flex gap-1">
-                        <button onClick={() => handleComplete(entry.id)} className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm" title={entry.status === 'completed' ? 'Вернуть в работу' : 'Отметить выполненным'}>
-                          {entry.status === 'completed' ? '↺' : '✓'}
-                        </button>
-                        {(entry.author_id === user?.id || isAdmin) && entry.status !== 'completed' && (
-                          <>
-                            <button onClick={() => openEditModal(entry)} className="w-7 h-7 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 flex items-center justify-center text-sm" title="Редактировать">✎</button>
-                            <button onClick={() => handleToggleImportant(entry.id)} className="w-7 h-7 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 flex items-center justify-center text-sm" title="Отметить как важное">☆</button>
-                          </>
-                        )}
-                        {(entry.author_id === user?.id || isAdmin) && (
-                          <button onClick={() => handleDelete(entry.id)} className="w-7 h-7 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 flex items-center justify-center text-sm" title="Удалить">✕</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        loading ? (
+          <div className="text-center py-12 text-slate-500">Загрузка...</div>
+        ) : entries.length === 0 ? (
+          <div className="card p-12 text-center"><p className="text-slate-500">Нет записей</p></div>
+        ) : isMobile ? (
+          <div className="space-y-3">
+            {entries.filter(e => !e.is_important).map((entry) => (
+              <MobileLogbookCard
+                key={entry.id}
+                entry={entry}
+                onComplete={handleComplete}
+                onToggleImportant={handleToggleImportant}
+                onEdit={openEditModal}
+                onDelete={handleDelete}
+                currentUserId={user?.id}
+                isAdmin={isAdmin}
+              />
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <LogbookTableComponent entries={entries.filter(e => !e.is_important)} />
+          </div>
+        )
       )}
 
+      {/* История (архив) */}
       {showHistory && (
-        loading ? <div className="text-center py-12 text-slate-500">Загрузка...</div> :
-        historyEntries.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">История пуста</p></div> :
-        <div className="card overflow-hidden opacity-75">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="table-header">
-                <tr>
-                  <th className="table-header-cell w-16">№</th>
-                  <th className="table-header-cell w-32">Номер комнаты</th>
-                  <th className="table-header-cell">Задача</th>
-                  <th className="table-header-cell w-40">Исполнитель</th>
-                  <th className="table-header-cell w-32">Автор</th>
-                  <th className="table-header-cell w-28">Статус</th>
-                  <th className="table-header-cell w-44">Удалена</th>
-                  <th className="table-header-cell w-24">Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historyEntries.map((entry) => (
-                  <tr key={entry.id} className="table-row">
-                    <td className="table-cell text-slate-500">{entry.id}</td>
-                    <td className="table-cell font-mono text-sm">{entry.room_number || '—'}</td>
-                    <td className="table-cell">
-                      <p className="font-medium text-slate-800 dark:text-white">{entry.task}</p>
-                      {entry.comment && <p className="text-xs text-slate-400 mt-1">💬 {entry.comment}</p>}
-                    </td>
-                    <td className="table-cell">{entry.assignee || '—'}</td>
-                    <td className="table-cell whitespace-nowrap">{formatAuthorName(entry.author_name)}</td>
-                    <td className="table-cell">{getStatusBadge(entry.status)}</td>
-                    <td className="table-cell text-sm text-slate-500 whitespace-nowrap">{entry.deleted_at ? formatDate(entry.deleted_at) : '—'}</td>
-                    <td className="table-cell whitespace-nowrap">
-                      {isAdmin && <button onClick={() => handleRestore(entry.id)} className="w-7 h-7 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 flex items-center justify-center text-sm" title="Восстановить">↺</button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        loading ? (
+          <div className="text-center py-12 text-slate-500">Загрузка...</div>
+        ) : historyEntries.length === 0 ? (
+          <div className="card p-12 text-center"><p className="text-slate-500">История пуста</p></div>
+        ) : isMobile ? (
+          <div className="space-y-3">
+            {historyEntries.map((entry) => (
+              <MobileLogbookCard
+                key={entry.id}
+                entry={entry}
+                onComplete={handleComplete}
+                onToggleImportant={handleToggleImportant}
+                onEdit={openEditModal}
+                onDelete={handleDelete}
+                onRestore={handleRestore}
+                isHistory={true}
+                currentUserId={user?.id}
+                isAdmin={isAdmin}
+              />
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 dark:bg-slate-700/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm">№</th>
+                    <th className="px-4 py-3 text-left text-sm">Комната</th>
+                    <th className="px-4 py-3 text-left text-sm">Задача</th>
+                    <th className="px-4 py-3 text-left text-sm">Исполнитель</th>
+                    <th className="px-4 py-3 text-left text-sm">Автор</th>
+                    <th className="px-4 py-3 text-left text-sm">Статус</th>
+                    <th className="px-4 py-3 text-left text-sm">Удалена</th>
+                    <th className="px-4 py-3 text-left text-sm">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyEntries.map((entry) => (
+                    <tr key={entry.id} className="border-b hover:bg-slate-50 dark:hover:bg-slate-700/50 opacity-75">
+                      <td className="px-4 py-3 text-sm">{entry.id}</td>
+                      <td className="px-4 py-3 text-sm">{entry.room_number || '—'}</td>
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="font-medium">{entry.task}</p>
+                          {entry.comment && <p className="text-xs text-slate-400 mt-1">💬 {entry.comment}</p>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{entry.assignee || '—'}</td>
+                      <td className="px-4 py-3 text-sm">{entry.author_name}</td>
+                      <td className="px-4 py-3">{getStatusBadge(entry.status)}</td>
+                      <td className="px-4 py-3 text-sm">{entry.deleted_at ? formatDate(entry.deleted_at) : '—'}</td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => handleRestore(entry.id)} className="p-1 text-emerald-600 hover:text-emerald-700" title="Восстановить">↺</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
       )}
 
+      {/* Модальное окно создания/редактирования */}
       {showModal && (
         <>
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 999999, marginTop: 0 }} onClick={() => setShowModal(false)} />
-          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'auto', zIndex: 1000000 }} className="dark:!bg-slate-800">
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto z-50 shadow-2xl modal-animate">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-slate-800 dark:text-white">{editingEntry ? 'Редактировать задачу' : 'Новая задача'}</h2>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div><label className="form-label">Номер комнаты</label><input type="text" value={formRoom} onChange={(e) => setFormRoom(e.target.value)} className="form-input" placeholder="Например: 1014, 2064..." /></div>
-              <div><label className="form-label">Задача *</label><textarea value={formTask} onChange={(e) => setFormTask(e.target.value)} className="form-input" rows={3} placeholder="Опишите задачу..." required /></div>
-              <div><label className="form-label">Исполнитель</label><input type="text" value={formAssignee} onChange={(e) => setFormAssignee(e.target.value)} className="form-input" placeholder="Кто должен выполнить" /></div>
-              <div><label className="form-label">Комментарий (необязательно)</label><textarea value={formComment} onChange={(e) => setFormComment(e.target.value)} className="form-input" rows={2} placeholder="Дополнительная информация..." /></div>
+              <div>
+                <label className="form-label">Номер комнаты (необязательно)</label>
+                <input type="text" value={formRoom} onChange={(e) => setFormRoom(e.target.value)} className="form-input" placeholder="Например: 1014, 2064..." />
+              </div>
+              <div>
+                <label className="form-label">Задача *</label>
+                <textarea value={formTask} onChange={(e) => setFormTask(e.target.value)} className="form-input" rows={3} placeholder="Опишите задачу..." required />
+              </div>
+              <div>
+                <label className="form-label">Исполнитель (необязательно)</label>
+                <input type="text" value={formAssignee} onChange={(e) => setFormAssignee(e.target.value)} className="form-input" placeholder="Кто должен выполнить" />
+              </div>
+              <div>
+                <label className="form-label">Комментарий (необязательно)</label>
+                <textarea value={formComment} onChange={(e) => setFormComment(e.target.value)} className="form-input" rows={2} placeholder="Дополнительная информация..." />
+              </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="is_important" checked={formImportant} onChange={(e) => setFormImportant(e.target.checked)} className="w-4 h-4 text-amber-600 rounded" />
                 <label htmlFor="is_important" className="form-label mb-0">Отметить как важную задачу (будет отображаться в отдельном блоке)</label>

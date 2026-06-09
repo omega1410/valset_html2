@@ -2,13 +2,17 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { checklistsService } from '../../services/checklistsService';
 import toast from 'react-hot-toast';
-import confetti from 'canvas-confetti';  // 👈 ДОБАВИТЬ ИМПОРТ
+import confetti from 'canvas-confetti';
+import { ChecklistSkeleton } from '../../components/SkeletonLoader';
 
 export const ChecklistDetail = () => {
   const { type } = useParams();
   const navigate = useNavigate();
   const [checklist, setChecklist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showHintModal, setShowHintModal] = useState(false);
+  const [hintText, setHintText] = useState('');
+  const [hintTaskName, setHintTaskName] = useState('');
 
   useEffect(() => {
     loadChecklist();
@@ -32,7 +36,6 @@ export const ChecklistDetail = () => {
       await loadChecklist();
       
       if (response.reset) {
-        // 🎉 КОНФЕТТИ ЗА ВЫПОЛНЕНИЕ ВСЕХ ЗАДАЧ 🎉
         confetti({
           particleCount: 150,
           spread: 70,
@@ -74,7 +77,7 @@ export const ChecklistDetail = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-12 text-slate-500 dark:text-slate-400">Загрузка...</div>;
+    return <ChecklistSkeleton />;
   }
 
   if (!checklist) return null;
@@ -114,13 +117,13 @@ export const ChecklistDetail = () => {
             <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-emerald-500 transition-all duration-300"
-                style={{ width: `${percentage}%` }}
+                style={{ width: `${Math.min(percentage, 100)}%` }}
               />
             </div>
           </div>
           
           {percentage === 100 && checklist.total > 0 && (
-            <div className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">
+            <div className="mt-3 text-sm text-emerald-600 dark:text-emerald-400 animate-pulse">
               🎉 Поздравляем! Все задачи выполнены!
             </div>
           )}
@@ -130,33 +133,93 @@ export const ChecklistDetail = () => {
           {checklist.tasks.map((task: any) => (
             <div
               key={task.id}
-              className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition"
-              onClick={() => handleToggleTask(task.id, task.is_done)}
+              className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group"
             >
               <div
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${
+                onClick={() => handleToggleTask(task.id, task.is_done)}
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition cursor-pointer ${
                   task.is_done
                     ? 'bg-emerald-500 border-emerald-500'
                     : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400'
                 }`}
               >
-                {task.is_done && (
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                {(task.is_done == 1 || task.is_done === true) && (
+                  <svg 
+                    className="w-3 h-3 text-white" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={3} 
+                      d="M5 13l4 4L19 7" 
+                    />
                   </svg>
                 )}
               </div>
+              
               <span
-                className={`flex-1 text-slate-700 dark:text-slate-300 ${
+                onClick={() => handleToggleTask(task.id, task.is_done)}
+                className={`flex-1 text-slate-700 dark:text-slate-300 transition cursor-pointer ${
                   task.is_done ? 'line-through text-slate-400 dark:text-slate-500' : ''
                 }`}
               >
                 {task.text}
               </span>
+              
+              {/* Кнопка подсказки — появляется ТОЛЬКО если есть hint */}
+              {task.hint && (
+                <button
+                  onClick={() => {
+                    setHintText(task.hint);
+                    setHintTaskName(task.text);
+                    setShowHintModal(true);
+                  }}
+                  className="text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 md:opacity-0 md:group-hover:opacity-100 transition"
+                  title="Подробнее"
+                >
+                  ℹ️
+                </button>
+              )}
             </div>
           ))}
         </div>
       </div>
+
+      {/* Модальное окно подсказки */}
+      {showHintModal && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40" 
+            onClick={() => setShowHintModal(false)} 
+          />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-md z-50 shadow-2xl">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
+                {hintTaskName}
+              </h3>
+              <button
+                onClick={() => setShowHintModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+              {hintText}
+            </div>
+            <button
+              onClick={() => setShowHintModal(false)}
+              className="mt-6 w-full btn-primary"
+            >
+              Понятно
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
+

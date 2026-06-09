@@ -390,10 +390,10 @@ div[style*="position: fixed"][style*="background-color: rgba"],
   animation: flash-random 8s infinite;
 }
 
-header {
+/* header {
   z-index: 20 !important;
   position: sticky !important;
-}
+} */
 
 /* Ограничиваем эффекты только hero-секцией */
 #hero-section {
@@ -671,4 +671,141 @@ html, body {
 .prose pre code {
   background-color: transparent;
   padding: 0;
+}
+
+/* Для Markdown в разделах */
+.prose ul {
+  list-style: disc !important;
+  padding-left: 1.5rem !important;
+}
+
+.prose ol {
+  list-style: decimal !important;
+  padding-left: 1.5rem !important;
+}
+
+.prose li {
+  margin-bottom: 0.25rem;
+}
+
+/* ========== МИКРО-АНИМАЦИИ ========== */
+
+/* 1. Анимация появления модалок */
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.modal-animate {
+  animation: modalPop 0.2s ease-out forwards;
+}
+
+/* 2. Анимация для переключения вкладок */
+@keyframes tabFade {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.tab-content-animate {
+  animation: tabFade 0.2s ease-out forwards;
+}
+
+/* 3. Анимация для чекбоксов */
+@keyframes checkBounce {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.checkbox-animated:checked {
+  animation: checkBounce 0.2s ease-out;
+}
+
+/* 4. Анимация для кнопки "Подробнее" (стрелка) */
+.hover-grow {
+  transition: transform 0.2s ease, gap 0.2s ease;
+}
+
+.hover-grow:hover {
+  transform: translateX(4px);
+}
+
+/* 5. Анимация для карточек при наведении */
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+}
+
+/* 6. Анимация загрузки (shimmer для скелетонов) */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(203, 213, 225, 0.3) 0%, 
+    rgba(203, 213, 225, 0.6) 50%, 
+    rgba(203, 213, 225, 0.3) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(51, 65, 85, 0.3) 0%, 
+    rgba(51, 65, 85, 0.6) 50%, 
+    rgba(51, 65, 85, 0.3) 100%);
+  background-size: 200% 100%;
+}
+
+/* Тень для текста на баннере */
+.hero-text-shadow {
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.hero-text-shadow-light {
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Анимация появления баннера */
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-animate {
+  animation: heroFadeIn 0.6s ease-out forwards;
 }

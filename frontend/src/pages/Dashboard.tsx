@@ -132,38 +132,64 @@ export const Dashboard = () => {
         </div>
       )}
 
-      <div id="hero-section" className="relative overflow-hidden rounded-2xl p-6 shadow-xl transition-all duration-500" style={{ backgroundImage: 'radial-gradient(circle farthest-corner at 10% 20%, rgba(0,51,102,1) 0%, rgba(0,102,204,1) 49.5%, rgba(0,191,255,1) 90%)' }}>
+      <div 
+        id="hero-section" 
+        className="relative overflow-hidden rounded-2xl p-6 shadow-xl transition-all duration-500 hero-animate" 
+        style={{ 
+          backgroundImage: 'radial-gradient(circle farthest-corner at 10% 20%, rgba(0,51,102,1) 0%, rgba(0,102,204,1) 49.5%, rgba(0,191,255,1) 90%)'
+        }}
+      >
         {isHeroVisible && weatherMain && <WeatherEffects weatherMain={weatherMain} isVisible={isHeroVisible} />}
-        <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
-        <div className="relative z-10 flex justify-between items-center flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{greeting}, {user?.first_name || user?.full_name}!</h1>
-            <p className="text-white/80 text-base">Добро пожаловать в систему адаптации персонала</p>
+        
+        {/* Эффект стекла */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-transparent to-white/5 pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="w-full lg:w-auto">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 hero-text-shadow">
+              {greeting}, {user?.first_name || user?.full_name}!
+            </h1>
+            <p className="text-white/80 text-base hero-text-shadow-light">
+              Добро пожаловать в систему адаптации персонала
+            </p>
             {!loading && stats?.personal && (
               <div className="mt-4 max-w-md">
                 <div className="flex justify-between text-xs text-white/70 mb-1">
-                  <span>Прогресс прохождения</span>
-                  <span>{stats.personal.tests_completion_percentage || 0}%</span>
+                  <span className="hero-text-shadow-light">Прогресс прохождения</span>
+                  <span className="hero-text-shadow-light">
+                    {Math.min(stats.personal.tests_completion_percentage || 0, 100)}%
+                  </span>
                 </div>
                 <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div className="progress-wave" style={{ width: `${stats.personal.tests_completion_percentage || 0}%` }} />
+                  <div 
+                    className="progress-wave" 
+                    style={{ width: `${Math.min(stats.personal.tests_completion_percentage || 0, 100)}%` }} 
+                  />
                 </div>
               </div>
             )}
           </div>
-          <WeatherWidget />
+          <div className="w-full lg:w-auto flex justify-center lg:justify-end">
+            <WeatherWidget />
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {modules.map((module) => (
-              <a key={module.title} href={module.href} className="card-3d rounded-xl bg-white dark:bg-slate-800 p-5 shadow-md hover:shadow-xl border border-slate-200 dark:border-slate-700 block transition-all duration-300">
+            {modules.map((module, index) => (
+              <a 
+                key={module.title} 
+                href={module.href} 
+                className="card-3d rounded-xl bg-white dark:bg-slate-800 p-5 shadow-md hover:shadow-xl border border-slate-200 dark:border-slate-700 block transition-all duration-300 group"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-1">{module.title}</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{module.description}</p>
-                <div className="mt-3 flex items-center text-sm text-blue-600 dark:text-blue-400 font-medium group-hover:translate-x-1 transition-transform">Перейти <span className="ml-1">→</span></div>
+                <div className="mt-3 flex items-center text-sm text-blue-600 dark:text-blue-400 font-medium group-hover:translate-x-1 transition-transform">
+                  Перейти <span className="ml-1">→</span>
+                </div>
               </a>
             ))}
           </div>

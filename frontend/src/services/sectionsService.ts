@@ -1,7 +1,7 @@
 import api from './api';
 
 export const sectionsService = {
-  getSections: async (page = 1, limit = 10) => {
+  getSections: async (page = 1, limit = 100) => {
     const response = await api.get(`/sections/?page=${page}&limit=${limit}`);
     return response.data;
   },

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { sectionsService } from '../../services/sectionsService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { PhotoViewer } from '../../components/Lightbox/PhotoViewer';
 
 export const SectionDetail = () => {
   const { id } = useParams();
@@ -10,6 +11,7 @@ export const SectionDetail = () => {
   const [section, setSection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
 
   useEffect(() => {
     loadSection();
@@ -20,6 +22,7 @@ export const SectionDetail = () => {
     try {
       const data = await sectionsService.getSection(Number(id));
       setSection(data);
+      localStorage.setItem(`page_title_/sections/${id}`, data.title);
     } catch (error) {
       console.error('Ошибка загрузки раздела:', error);
       navigate('/sections');
@@ -42,6 +45,11 @@ export const SectionDetail = () => {
   };
 
   const photos = getPhotos();
+
+  const openPhotoViewer = (index: number) => {
+    setCurrentPhotoIndex(index);
+    setShowPhotoViewer(true);
+  };
 
   const nextPhoto = () => {
     if (photos.length === 0) return;
@@ -93,14 +101,24 @@ export const SectionDetail = () => {
                   </button>
                 )}
 
-                <img
-                  src={`/assets/${photos[currentPhotoIndex]}`}
-                  alt={`Фото ${currentPhotoIndex + 1}`}
-                  className="w-full object-contain max-h-96"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://placehold.co/800x400/e2e8f0/64748b?text=No+Image';
-                  }}
-                />
+                <button
+                  onClick={() => openPhotoViewer(currentPhotoIndex)}
+                  className="cursor-pointer group relative"
+                >
+                  <img
+                    src={`/assets/${photos[currentPhotoIndex]}`}
+                    alt={`Фото ${currentPhotoIndex + 1}`}
+                    className="w-full object-contain max-h-96 transition-transform duration-200 group-hover:scale-[1.02]"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://placehold.co/800x400/e2e8f0/64748b?text=No+Image';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 text-white text-sm bg-black/50 px-3 py-1 rounded-full transition">
+                      🔍 Нажмите для увеличения
+                    </span>
+                  </div>
+                </button>
 
                 {photos.length > 1 && (
                   <button
@@ -137,6 +155,15 @@ export const SectionDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Полноэкранный просмотр фото */}
+      {showPhotoViewer && (
+        <PhotoViewer
+          photos={photos}
+          initialIndex={currentPhotoIndex}
+          onClose={() => setShowPhotoViewer(false)}
+        />
+      )}
     </div>
   );
 };
