@@ -103,7 +103,7 @@ export const FilesList = () => {
         <p className="page-subtitle">Бланки, формы и нормативные документы</p>
       </div>
 
-      {/* Поиск */}
+      {/* ПОИСК */}
       <div className="relative">
         <input
           type="text"
@@ -123,7 +123,7 @@ export const FilesList = () => {
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -149,7 +149,7 @@ export const FilesList = () => {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-700"
+              className="mt-3 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             >
               Очистить поиск
             </button>
@@ -178,7 +178,7 @@ export const FilesList = () => {
                 {filteredFiles.map((file, index) => (
                   <tr key={index} className="table-row">
                     <td className="table-cell text-2xl">{getFileIcon(file.name)}</td>
-                    <td className="table-cell font-medium text-slate-800 dark:text-white">
+                    <td className="table-cell font-medium text-slate-800 dark:text-white break-words max-w-md">
                       {file.name}
                     </td>
                     <td className="table-cell">

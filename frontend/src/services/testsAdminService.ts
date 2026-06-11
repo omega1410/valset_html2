@@ -38,7 +38,7 @@ export const testsAdminService = {
     return response.data;
   },
   
-  deleteQuestion: async (id: number) => {
+   deleteQuestion: async (id: number) => {
     const response = await api.delete(`/admin/questions/${id}`);
     return response.data;
   },

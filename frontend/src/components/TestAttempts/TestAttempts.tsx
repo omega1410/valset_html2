@@ -123,9 +123,9 @@ export const TestAttempts = ({ testId, onClose }: { testId: number; onClose: () 
                         </span>
                       </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
-                        <div>📅 {formatDate(attempt.created_at)}</div>
-                        <div>✅ {attempt.correct_answers}/{attempt.total_questions}</div>
-                        {attempt.time_spent && <div>⏱️ {formatTime(attempt.time_spent)}</div>}
+                        <div>{formatDate(attempt.created_at)}</div>
+                        <div>{attempt.correct_answers}/{attempt.total_questions}</div>
+                        {attempt.time_spent && <div>{formatTime(attempt.time_spent)}</div>}
                       </div>
                     </button>
                   ))}
@@ -189,7 +189,7 @@ export const TestAttempts = ({ testId, onClose }: { testId: number; onClose: () 
                   </div>
                 ) : (
                   <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                    Выберите попытку слева
+                    Выберите попытку
                   </div>
                 )}
               </div>

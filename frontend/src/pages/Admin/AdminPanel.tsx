@@ -21,6 +21,8 @@ import { testsAdminService } from '../../services/testsAdminService';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useMobile } from '../../hooks/useMobile';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
+import { useQueryClient } from '@tanstack/react-query';
 
 function SortableSectionRow({ section, onEdit, onDelete, onPhoto }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
@@ -51,6 +53,7 @@ function SortableSectionRow({ section, onEdit, onDelete, onPhoto }) {
 
 export const AdminPanel = () => {
   const isMobile = useMobile();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('sections');
   const [sections, setSections] = useState([]);
   const [users, setUsers] = useState([]);
@@ -91,7 +94,7 @@ export const AdminPanel = () => {
   const [taskShiftType, setTaskShiftType] = useState('day');
   const [taskText, setTaskText] = useState('');
   const [taskOrder, setTaskOrder] = useState(1);
-  const [taskHint, setTaskHint] = useState('');  // <-- ДОБАВЛЕНО
+  const [taskHint, setTaskHint] = useState('');
   
   const [newsTitle, setNewsTitle] = useState('');
   const [newsContent, setNewsContent] = useState('');
@@ -110,41 +113,112 @@ export const AdminPanel = () => {
 
   const [orderedSections, setOrderedSections] = useState([]);
 
-  useEffect(() => {
-    loadData();
-  }, [activeTab]);
+  // ========== АВТО-ОБНОВЛЕНИЕ ==========
+  useAutoRefresh({
+    queryKeys: [
+      ['admin', 'sections'],
+      ['admin', 'tests'],
+      ['admin', 'checklists'],
+      ['admin', 'news'],
+      ['admin', 'users'],
+      ['admin', 'files'],
+      ['admin', 'feedback']
+    ],
+    interval: 15000,
+    enabled: true,
+    onRefresh: () => {
+      if (activeTab === 'sections') {
+        loadSectionsData();
+      } else if (activeTab === 'tests') {
+        loadTestsData();
+      } else if (activeTab === 'checklists') {
+        loadChecklistsData();
+      } else if (activeTab === 'news') {
+        loadNewsData();
+      } else if (activeTab === 'users') {
+        loadUsersData();
+      } else if (activeTab === 'files') {
+        loadFilesData();
+      } else if (activeTab === 'feedback') {
+        loadFeedback();
+      }
+    }
+  });
 
   useEffect(() => {
     setOrderedSections(sections);
   }, [sections]);
 
-  useEffect(() => {
-    if (activeTab === 'feedback') {
-      loadFeedback();
+  // ========== ФУНКЦИИ ЗАГРУЗКИ ДАННЫХ ==========
+  const loadSectionsData = async () => {
+    try {
+      const data = await adminService.getSections();
+      setSections(data);
+    } catch (error) {
+      console.error('Ошибка загрузки разделов:', error);
     }
-  }, [activeTab]);
+  };
+
+  const loadUsersData = async () => {
+    try {
+      const data = await adminService.getUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error('Ошибка загрузки пользователей:', error);
+    }
+  };
+
+  const loadTestsData = async () => {
+    try {
+      const data = await testsAdminService.getTests();
+      setTests(data);
+    } catch (error) {
+      console.error('Ошибка загрузки тестов:', error);
+    }
+  };
+
+  const loadChecklistsData = async () => {
+    try {
+      const data = await adminService.getChecklistTasks();
+      setChecklistTasks(data);
+    } catch (error) {
+      console.error('Ошибка загрузки чек-листов:', error);
+    }
+  };
+
+  const loadNewsData = async () => {
+    try {
+      const data = await adminService.getNews();
+      setNews(data);
+    } catch (error) {
+      console.error('Ошибка загрузки новостей:', error);
+    }
+  };
+
+  const loadFilesData = async () => {
+    try {
+      const data = await adminService.getFiles();
+      setFiles(data);
+    } catch (error) {
+      console.error('Ошибка загрузки файлов:', error);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
     try {
       if (activeTab === 'sections') {
-        const data = await adminService.getSections();
-        setSections(data);
+        await loadSectionsData();
       } else if (activeTab === 'users') {
-        const data = await adminService.getUsers();
-        setUsers(data);
+        await loadUsersData();
       } else if (activeTab === 'tests') {
-        const data = await testsAdminService.getTests();
-        setTests(data);
+        await loadTestsData();
       } else if (activeTab === 'checklists') {
-        const data = await adminService.getChecklistTasks();
-        setChecklistTasks(data);
+        await loadChecklistsData();
       } else if (activeTab === 'news') {
-        const data = await adminService.getNews();
-        setNews(data);
+        await loadNewsData();
       } else if (activeTab === 'files') {
-        const data = await adminService.getFiles();
-        setFiles(data);
+        await loadFilesData();
       }
     } catch (error) {
       console.error('Ошибка загрузки:', error);
@@ -171,6 +245,15 @@ export const AdminPanel = () => {
     }
   };
 
+  useEffect(() => {
+    if (activeTab === 'feedback') {
+      loadFeedback();
+    } else {
+      loadData();
+    }
+  }, [activeTab]);
+
+  // ========== FEEDBACK ФУНКЦИИ ==========
   const updateFeedbackStatus = async (id: number, status: string) => {
     try {
       await api.put(`/feedback/admin/feedback/${id}`, { status });
@@ -211,6 +294,7 @@ export const AdminPanel = () => {
     }
   };
 
+  // ========== РАЗДЕЛЫ ==========
   const openEditModal = async (id: number) => {
     try {
       const section = await adminService.getSection(id);
@@ -249,7 +333,7 @@ export const AdminPanel = () => {
       await adminService.addPhotos(selectedSection.id, formPhotos);
       toast.success('Фото добавлены');
       setFormPhotos([]);
-      await loadData();
+      await loadSectionsData();
       setRefreshKey(prev => prev + 1);
       const updatedSection = await adminService.getSection(selectedSection.id);
       setSelectedSection(updatedSection);
@@ -273,7 +357,7 @@ export const AdminPanel = () => {
       try {
         await adminService.deletePhoto(selectedSection.id, slot);
         toast.success('Фото удалено');
-        await loadData();
+        await loadSectionsData();
         setRefreshKey(prev => prev + 1);
         const updatedSection = await adminService.getSection(selectedSection.id);
         setSelectedSection(updatedSection);
@@ -311,7 +395,8 @@ export const AdminPanel = () => {
       setFormTitle('');
       setFormContent('');
       setFormPhotos([]);
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sections'] });
+      await loadSectionsData();
     } catch (error) {
       toast.error(editingSection ? 'Ошибка обновления' : 'Ошибка создания');
     }
@@ -322,7 +407,8 @@ export const AdminPanel = () => {
       try {
         await adminService.deleteSection(id);
         toast.success('Раздел удалён');
-        await loadData();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'sections'] });
+        await loadSectionsData();
       } catch (error) {
         toast.error('Ошибка удаления');
       }
@@ -340,13 +426,14 @@ export const AdminPanel = () => {
       try {
         await adminService.reorderSections(sectionIds);
         toast.success('Порядок разделов сохранён');
-        await loadData();
+        await loadSectionsData();
       } catch (error) {
         toast.error('Ошибка сохранения порядка');
       }
     }
   };
 
+  // ========== ПОЛЬЗОВАТЕЛИ ==========
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userFirstName.trim() || !userLastName.trim()) {
@@ -369,7 +456,8 @@ export const AdminPanel = () => {
       setUserLastName('');
       setUserPassword('');
       setUserRole('user');
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      await loadUsersData();
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Ошибка создания');
     }
@@ -381,13 +469,15 @@ export const AdminPanel = () => {
       try {
         await adminService.deleteUser(id);
         toast.success('Пользователь удалён');
-        await loadData();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+        await loadUsersData();
       } catch (error: any) {
         toast.error(error.response?.data?.detail || 'Ошибка удаления');
       }
     }
   };
 
+  // ========== ТЕСТЫ ==========
   const openEditTestModal = async (testId: number) => {
     try {
       const data = await testsAdminService.getTest(testId);
@@ -425,7 +515,8 @@ export const AdminPanel = () => {
       toast.success('Тест создан');
       setShowTestModal(false);
       resetTestForm();
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+      await loadTestsData();
     } catch (error) {
       toast.error('Ошибка создания');
     }
@@ -443,7 +534,8 @@ export const AdminPanel = () => {
       toast.success('Тест обновлён');
       setShowTestModal(false);
       resetTestForm();
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+      await loadTestsData();
     } catch (error) {
       toast.error('Ошибка обновления');
     }
@@ -454,7 +546,8 @@ export const AdminPanel = () => {
       try {
         await testsAdminService.deleteTest(testId);
         toast.success('Тест удалён');
-        await loadData();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+        await loadTestsData();
       } catch (error) {
         toast.error('Ошибка удаления');
       }
@@ -478,13 +571,28 @@ export const AdminPanel = () => {
     setTestQuestions(newQuestions);
   };
 
-  const removeQuestionFromForm = (index: number) => {
-    if (confirm('Удалить вопрос?')) {
-      const newQuestions = [...testQuestions];
+  const removeQuestionFromForm = async (index: number) => {
+    const question = testQuestions[index];
+  
+    if (!confirm('Удалить вопрос?')) return;
+  
+    // Если вопрос уже сохранён в БД (есть id) — удаляем через API
+    if (question.id) {
+      try {
+        await testsAdminService.deleteQuestion(question.id);
+        toast.success('Вопрос удалён');
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+      } catch (error) {
+        toast.error('Ошибка удаления вопроса');
+        return;
+      }
+    }
+  
+    // Удаляем из локального state
+    const newQuestions = [...testQuestions];
       newQuestions.splice(index, 1);
       newQuestions.forEach((q, idx) => { q.order_num = idx + 1; });
       setTestQuestions(newQuestions);
-    }
   };
 
   const saveQuestions = async () => {
@@ -520,12 +628,14 @@ export const AdminPanel = () => {
         }
       }
       toast.success('Вопросы сохранены');
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+      await loadTestsData();
     } catch (error) {
       toast.error('Ошибка сохранения вопросов');
     }
   };
 
+  // ========== ФАЙЛЫ ==========
   const handleUploadFile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) return;
@@ -535,7 +645,8 @@ export const AdminPanel = () => {
       await adminService.uploadFile(formData);
       toast.success('Файл загружен');
       setSelectedFile(null);
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'files'] });
+      await loadFilesData();
     } catch (error) {
       toast.error('Ошибка загрузки');
     }
@@ -546,13 +657,15 @@ export const AdminPanel = () => {
       try {
         await adminService.deleteFile(filename);
         toast.success('Файл удалён');
-        await loadData();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'files'] });
+        await loadFilesData();
       } catch (error) {
         toast.error('Ошибка удаления');
       }
     }
   };
 
+  // ========== ЧЕК-ЛИСТЫ ==========
   const openTaskModal = (task?: any) => {
     if (task) {
       setEditingTask(task);
@@ -591,7 +704,8 @@ export const AdminPanel = () => {
         toast.success('Задача создана');
       }
       setShowChecklistModal(false);
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'checklists'] });
+      await loadChecklistsData();
     } catch (error) {
       toast.error(editingTask ? 'Ошибка обновления' : 'Ошибка создания');
     }
@@ -602,25 +716,16 @@ export const AdminPanel = () => {
       try {
         await adminService.deleteChecklistTask(id);
         toast.success('Задача удалена');
-        await loadData();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'checklists'] });
+        await loadChecklistsData();
       } catch (error) {
         toast.error('Ошибка удаления');
       }
     }
   };
 
-  const handleResetDefaultTasks = async () => {
-    if (confirm('Сбросить все задачи до стандартных?')) {
-      try {
-        await adminService.resetDefaultChecklistTasks();
-        toast.success('Задачи сброшены до стандартных');
-        await loadData();
-      } catch (error) {
-        toast.error('Ошибка сброса');
-      }
-    }
-  };
 
+  // ========== НОВОСТИ ==========
   const openNewsModal = (item?: any) => {
     if (item) {
       setEditingNews(item);
@@ -645,7 +750,8 @@ export const AdminPanel = () => {
         toast.success('Новость создана');
       }
       setShowNewsModal(false);
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'news'] });
+      await loadNewsData();
     } catch (error) {
       toast.error(editingNews ? 'Ошибка обновления' : 'Ошибка создания');
     }
@@ -656,7 +762,8 @@ export const AdminPanel = () => {
       try {
         await adminService.deleteNews(id);
         toast.success('Новость удалена');
-        await loadData();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'news'] });
+        await loadNewsData();
       } catch (error) {
         toast.error('Ошибка удаления');
       }
@@ -667,12 +774,14 @@ export const AdminPanel = () => {
     try {
       await adminService.updateNews(id, { is_published: !isPublished });
       toast.success(isPublished ? 'Новость скрыта' : 'Новость опубликована');
-      await loadData();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'news'] });
+      await loadNewsData();
     } catch (error) {
       toast.error('Ошибка');
     }
   };
 
+  // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -697,6 +806,7 @@ export const AdminPanel = () => {
     }
   };
 
+  // ========== МОБИЛЬНЫЕ КАРТОЧКИ ==========
   const MobileUserCard = ({ user }: { user: any }) => (
     <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border border-slate-200 dark:border-slate-700">
       <div className="flex justify-between items-start mb-2">
@@ -724,7 +834,7 @@ export const AdminPanel = () => {
       {test.description && <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">{test.description}</p>}
       <div className="flex justify-between items-center text-sm">
         <span className="text-slate-500 dark:text-slate-400">📘 {test.questions_count} вопросов</span>
-        {test.section_id && <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">Раздел {test.section_id}</span>}
+        {test.section_id && <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded"></span>}
       </div>
       <button onClick={() => openEditTestModal(test.id)} className="mt-3 w-full btn-outline text-sm py-2">Редактировать вопросы</button>
     </div>
@@ -822,6 +932,7 @@ export const AdminPanel = () => {
     </div>
   );
 
+  // ========== РЕНДЕР ==========
   return (
     <div className="space-y-6">
       <div>
@@ -843,14 +954,35 @@ export const AdminPanel = () => {
 
       {activeTab === 'sections' && (
         <div className="space-y-4">
-          <div className="flex justify-end"><button onClick={() => { setEditingSection(null); setFormTitle(''); setFormContent(''); setFormPhotos([]); setShowModal(true); }} className="btn-primary">+ Добавить раздел</button></div>
-          {loading ? <div className="text-center py-12">Загрузка...</div> : orderedSections.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">Нет разделов</p></div> : (
+          <div className="flex justify-end">
+            <button onClick={() => { setEditingSection(null); setFormTitle(''); setFormContent(''); setFormPhotos([]); setShowModal(true); }} className="btn-primary">
+              + Добавить раздел
+            </button>
+          </div>
+          {loading ? (
+            <div className="text-center py-12">Загрузка...</div>
+          ) : orderedSections.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-slate-500">Нет разделов</p>
+            </div>
+          ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={orderedSections.map((s: any) => s.id)} strategy={verticalListSortingStrategy}>
                 <div className="card overflow-hidden overflow-x-auto">
                   <table className="w-full min-w-[500px]">
-                    <thead className="table-header"><tr><th className="table-header-cell w-10"></th><th className="table-header-cell w-16">ID</th><th className="table-header-cell">Название</th><th className="table-header-cell w-48">Действия</th></tr></thead>
-                    <tbody>{orderedSections.map((section: any) => (<SortableSectionRow key={section.id} section={section} onEdit={openEditModal} onDelete={handleDeleteSection} onPhoto={openPhotoModal} />))}</tbody>
+                    <thead className="table-header">
+                      <tr>
+                        <th className="table-header-cell w-10"></th>
+                        <th className="table-header-cell w-16">ID</th>
+                        <th className="table-header-cell">Название</th>
+                        <th className="table-header-cell w-48">Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderedSections.map((section: any) => (
+                        <SortableSectionRow key={section.id} section={section} onEdit={openEditModal} onDelete={handleDeleteSection} onPhoto={openPhotoModal} />
+                      ))}
+                    </tbody>
                   </table>
                 </div>
               </SortableContext>
@@ -861,25 +993,70 @@ export const AdminPanel = () => {
 
       {activeTab === 'users' && (
         <div className="space-y-6">
-          <div className="card p-6"><h3 className="font-semibold text-slate-800 dark:text-white mb-4">Добавить пользователя</h3>
+          <div className="card p-6">
+            <h3 className="font-semibold text-slate-800 dark:text-white mb-4">Добавить пользователя</h3>
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><label className="form-label">Имя</label><input type="text" placeholder="Иван" value={userFirstName} onChange={(e) => setUserFirstName(e.target.value)} className="form-input" required /></div>
-                <div><label className="form-label">Фамилия</label><input type="text" placeholder="Иванов" value={userLastName} onChange={(e) => setUserLastName(e.target.value)} className="form-input" required /></div>
-                <div><label className="form-label">Email</label><input type="email" placeholder="example@hotel.com" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className="form-input" required /></div>
-                <div><label className="form-label">Пароль</label><input type="password" placeholder="••••••" value={userPassword} onChange={(e) => setUserPassword(e.target.value)} className="form-input" required /></div>
+                <div>
+                  <label className="form-label">Имя</label>
+                  <input type="text" placeholder="Иван" value={userFirstName} onChange={(e) => setUserFirstName(e.target.value)} className="form-input" required />
+                </div>
+                <div>
+                  <label className="form-label">Фамилия</label>
+                  <input type="text" placeholder="Иванов" value={userLastName} onChange={(e) => setUserLastName(e.target.value)} className="form-input" required />
+                </div>
+                <div>
+                  <label className="form-label">Email</label>
+                  <input type="email" placeholder="example@hotel.com" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className="form-input" required />
+                </div>
+                <div>
+                  <label className="form-label">Пароль</label>
+                  <input type="password" placeholder="••••••" value={userPassword} onChange={(e) => setUserPassword(e.target.value)} className="form-input" required />
+                </div>
               </div>
-              <div><label className="form-label">Роль</label><select value={userRole} onChange={(e) => setUserRole(e.target.value)} className="form-input"><option value="user">Пользователь</option><option value="admin">Администратор</option></select></div>
+              <div>
+                <label className="form-label">Роль</label>
+                <select value={userRole} onChange={(e) => setUserRole(e.target.value)} className="form-input">
+                  <option value="user">Пользователь</option>
+                  <option value="admin">Администратор</option>
+                </select>
+              </div>
               <button type="submit" className="btn-secondary">Создать пользователя</button>
             </form>
           </div>
-          {loading ? <div className="text-center py-12">Загрузка...</div> : isMobile ? (
+          {loading ? (
+            <div className="text-center py-12">Загрузка...</div>
+          ) : isMobile ? (
             <div className="space-y-3">{users.map((user: any) => (<MobileUserCard key={user.id} user={user} />))}</div>
           ) : (
             <div className="card overflow-hidden overflow-x-auto">
               <table className="w-full min-w-[600px]">
-                <thead className="table-header"><tr><th className="table-header-cell">ID</th><th className="table-header-cell">Email</th><th className="table-header-cell">Имя и Фамилия</th><th className="table-header-cell">Роль</th><th className="table-header-cell"></th></tr></thead>
-                <tbody>{users.map((user: any) => (<tr key={user.id} className="table-row"><td className="table-cell">{user.id}</td><td className="table-cell">{user.email}</td><td className="table-cell font-medium">{user.full_name}</td><td className="table-cell"><span className={`px-2 py-1 rounded-full text-xs ${user.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{user.role === 'admin' ? 'Админ' : 'Пользователь'}</span></td><td className="table-cell"><button onClick={() => handleDeleteUser(user.id, user.role)} className="text-red-600">Удалить</button></td></tr>))}</tbody>
+                <thead className="table-header">
+                  <tr>
+                    <th className="table-header-cell">ID</th>
+                    <th className="table-header-cell">Email</th>
+                    <th className="table-header-cell">Имя и Фамилия</th>
+                    <th className="table-header-cell">Роль</th>
+                    <th className="table-header-cell"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user: any) => (
+                    <tr key={user.id} className="table-row">
+                      <td className="table-cell">{user.id}</td>
+                      <td className="table-cell">{user.email}</td>
+                      <td className="table-cell font-medium">{user.full_name}</td>
+                      <td className="table-cell">
+                        <span className={`px-2 py-1 rounded-full text-xs ${user.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                          {user.role === 'admin' ? 'Админ' : 'Пользователь'}
+                        </span>
+                      </td>
+                      <td className="table-cell">
+                        <button onClick={() => handleDeleteUser(user.id, user.role)} className="text-red-600">Удалить</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           )}
@@ -888,12 +1065,38 @@ export const AdminPanel = () => {
 
       {activeTab === 'tests' && (
         <div className="space-y-4">
-          <div className="flex justify-end"><button onClick={() => { resetTestForm(); setShowTestModal(true); }} className="btn-primary">+ Создать тест</button></div>
-          {loading ? <div className="text-center py-12">Загрузка...</div> : tests.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">Нет тестов</p></div> : isMobile ? (
+          <div className="flex justify-end">
+            <button onClick={() => { resetTestForm(); setShowTestModal(true); }} className="btn-primary">
+              + Создать тест
+            </button>
+          </div>
+          {loading ? (
+            <div className="text-center py-12">Загрузка...</div>
+          ) : tests.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-slate-500">Нет тестов</p>
+            </div>
+          ) : isMobile ? (
             <div className="space-y-3">{tests.map((test: any) => (<MobileTestCard key={test.id} test={test} />))}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {tests.map((test: any) => (<div key={test.id} className="card p-5"><div className="flex justify-between items-start mb-3"><h3 className="font-semibold text-lg">{test.title}</h3><div className="flex gap-2"><button onClick={() => openEditTestModal(test.id)} className="text-blue-600">✎</button><button onClick={() => handleDeleteTest(test.id)} className="text-red-600">✕</button></div></div>{test.description && <p className="text-sm text-slate-500 mb-3">{test.description}</p>}<div className="flex justify-between items-center text-sm"><span className="text-slate-500">📘 {test.questions_count} вопросов</span>{test.section_id && <span className="text-xs bg-slate-100 px-2 py-1 rounded">Раздел {test.section_id}</span>}</div><button onClick={() => openEditTestModal(test.id)} className="mt-3 w-full btn-outline text-sm">Редактировать вопросы</button></div>))}
+              {tests.map((test: any) => (
+                <div key={test.id} className="card p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-semibold text-lg">{test.title}</h3>
+                    <div className="flex gap-2">
+                      <button onClick={() => openEditTestModal(test.id)} className="text-blue-600">✎</button>
+                      <button onClick={() => handleDeleteTest(test.id)} className="text-red-600">✕</button>
+                    </div>
+                  </div>
+                  {test.description && <p className="text-sm text-slate-500 mb-3">{test.description}</p>}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">📘 {test.questions_count} вопросов</span>
+                    {test.section_id && <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">Раздел {test.section_id}</span>}
+                  </div>
+                  <button onClick={() => openEditTestModal(test.id)} className="mt-3 w-full btn-outline text-sm py-2">Редактировать вопросы</button>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -901,25 +1104,50 @@ export const AdminPanel = () => {
 
       {activeTab === 'checklists' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between gap-3"><button onClick={() => openTaskModal()} className="btn-primary">+ Добавить задачу</button><button onClick={handleResetDefaultTasks} className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Сбросить до стандартных</button></div>
-          {loading ? <div className="text-center py-12">Загрузка...</div> : checklistTasks.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">Нет задач</p></div> : isMobile ? (
+          <div className="flex flex-col sm:flex-row justify-between gap-3">
+            <button onClick={() => openTaskModal()} className="btn-primary">+ Добавить задачу</button>
+          </div>
+          {loading ? (
+            <div className="text-center py-12">Загрузка...</div>
+          ) : checklistTasks.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-slate-500">Нет задач</p>
+            </div>
+          ) : isMobile ? (
             <div className="space-y-3">{checklistTasks.map((task: any) => (<MobileChecklistCard key={task.id} task={task} />))}</div>
           ) : (
             <div className="card overflow-hidden overflow-x-auto">
-              <table className="w-full min-w-[600px]"><thead className="table-header"><tr><th className="table-header-cell">ID</th><th className="table-header-cell">Смена</th><th className="table-header-cell">Порядок</th><th className="table-header-cell">Задача</th><th className="table-header-cell">Подсказка</th><th className="table-header-cell">Действия</th></tr></thead>
-              <tbody>
-                {checklistTasks.map((task: any) => (
-                  <tr key={task.id} className="table-row">
-                    <td className="table-cell">{task.id}</td>
-                    <td className="table-cell"><span className={`px-2 py-1 rounded-full text-xs ${task.shift_type === 'day' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{task.shift_type === 'day' ? 'Дневная' : 'Ночная'}</span></td>
-                    <td className="table-cell">{task.task_order}</td>
-                    <td className="table-cell">{task.task_text}</td>
-                    <td className="table-cell text-xs text-slate-500 max-w-xs truncate">{task.hint || '—'}</td>
-                    <td className="table-cell space-x-3"><button onClick={() => openTaskModal(task)} className="text-blue-600">Ред.</button><button onClick={() => handleDeleteTask(task.id)} className="text-red-600">Уд.</button></td>
+              <table className="w-full min-w-[600px]">
+                <thead className="table-header">
+                  <tr>
+                    <th className="table-header-cell">ID</th>
+                    <th className="table-header-cell">Смена</th>
+                    <th className="table-header-cell">Порядок</th>
+                    <th className="table-header-cell">Задача</th>
+                    <th className="table-header-cell">Подсказка</th>
+                    <th className="table-header-cell">Действия</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {checklistTasks.map((task: any) => (
+                    <tr key={task.id} className="table-row">
+                      <td className="table-cell">{task.id}</td>
+                      <td className="table-cell">
+                        <span className={`px-2 py-1 rounded-full text-xs ${task.shift_type === 'day' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                          {task.shift_type === 'day' ? 'Дневная' : 'Ночная'}
+                        </span>
+                      </td>
+                      <td className="table-cell">{task.task_order}</td>
+                      <td className="table-cell">{task.task_text}</td>
+                      <td className="table-cell text-xs text-slate-500 max-w-xs truncate">{task.hint || '—'}</td>
+                      <td className="table-cell space-x-3">
+                        <button onClick={() => openTaskModal(task)} className="text-blue-600">Ред.</button>
+                        <button onClick={() => handleDeleteTask(task.id)} className="text-red-600">Уд.</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -927,12 +1155,50 @@ export const AdminPanel = () => {
 
       {activeTab === 'news' && (
         <div className="space-y-4">
-          <div className="flex justify-end"><button onClick={() => openNewsModal()} className="btn-primary">+ Создать новость</button></div>
-          {loading ? <div className="text-center py-12">Загрузка...</div> : news.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">Нет новостей</p></div> : isMobile ? (
+          <div className="flex justify-end">
+            <button onClick={() => openNewsModal()} className="btn-primary">+ Создать новость</button>
+          </div>
+          {loading ? (
+            <div className="text-center py-12">Загрузка...</div>
+          ) : news.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-slate-500">Нет новостей</p>
+            </div>
+          ) : isMobile ? (
             <div className="space-y-3">{news.map((item: any) => (<MobileNewsCard key={item.id} item={item} />))}</div>
           ) : (
             <div className="card overflow-hidden overflow-x-auto">
-              <table className="w-full min-w-[650px]"><thead className="table-header"><tr><th className="table-header-cell">ID</th><th className="table-header-cell">Заголовок</th><th className="table-header-cell">Автор</th><th className="table-header-cell">Статус</th><th className="table-header-cell">Дата</th><th className="table-header-cell">Действия</th></tr></thead><tbody>{news.map((item: any) => (<tr key={item.id} className="table-row"><td className="table-cell">{item.id}</td><td className="table-cell font-medium">{item.title}</td><td className="table-cell">{item.author_name}</td><td className="table-cell"><button onClick={() => handleTogglePublish(item.id, item.is_published)} className={`px-2 py-1 rounded-full text-xs ${item.is_published ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{item.is_published ? 'Опубликовано' : 'Скрыто'}</button></td><td className="table-cell">{new Date(item.created_at).toLocaleDateString('ru-RU')}</td><td className="table-cell space-x-3"><button onClick={() => openNewsModal(item)} className="text-blue-600">Ред.</button><button onClick={() => handleDeleteNews(item.id)} className="text-red-600">Уд.</button></td></tr>))}</tbody></table>
+              <table className="w-full min-w-[650px]">
+                <thead className="table-header">
+                  <tr>
+                    <th className="table-header-cell">ID</th>
+                    <th className="table-header-cell">Заголовок</th>
+                    <th className="table-header-cell">Автор</th>
+                    <th className="table-header-cell">Статус</th>
+                    <th className="table-header-cell">Дата</th>
+                    <th className="table-header-cell">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {news.map((item: any) => (
+                    <tr key={item.id} className="table-row">
+                      <td className="table-cell">{item.id}</td>
+                      <td className="table-cell font-medium">{item.title}</td>
+                      <td className="table-cell">{item.author_name}</td>
+                      <td className="table-cell">
+                        <button onClick={() => handleTogglePublish(item.id, item.is_published)} className={`px-2 py-1 rounded-full text-xs ${item.is_published ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {item.is_published ? 'Опубликовано' : 'Скрыто'}
+                        </button>
+                      </td>
+                      <td className="table-cell">{new Date(item.created_at).toLocaleDateString('ru-RU')}</td>
+                      <td className="table-cell space-x-3">
+                        <button onClick={() => openNewsModal(item)} className="text-blue-600">Ред.</button>
+                        <button onClick={() => handleDeleteNews(item.id)} className="text-red-600">Уд.</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -940,41 +1206,121 @@ export const AdminPanel = () => {
 
       {activeTab === 'files' && (
         <div className="space-y-6">
-          <div className="card p-6"><h3 className="font-semibold mb-4">Загрузить файл</h3><form onSubmit={handleUploadFile} className="space-y-4"><input type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="w-full" required /><button type="submit" className="btn-primary">Загрузить</button></form></div>
-          {loading ? <div className="text-center py-12">Загрузка...</div> : isMobile ? (
+          <div className="card p-6">
+            <h3 className="font-semibold mb-4">Загрузить файл</h3>
+            <form onSubmit={handleUploadFile} className="space-y-4">
+              <input type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="w-full" required />
+              <button type="submit" className="btn-primary">Загрузить</button>
+            </form>
+          </div>
+          {loading ? (
+            <div className="text-center py-12">Загрузка...</div>
+          ) : isMobile ? (
             <div className="space-y-3">{files.map((file: any) => (<MobileFileCard key={file.name} file={file} />))}</div>
           ) : (
-            <div className="card overflow-hidden overflow-x-auto"><table className="w-full min-w-[500px]"><thead className="table-header"><tr><th className="table-header-cell">Название</th><th className="table-header-cell">Размер</th><th className="table-header-cell"></th></tr></thead><tbody>{files.map((file: any) => (<tr key={file.name} className="table-row"><td className="table-cell font-medium">{file.name}</td><td className="table-cell">{formatFileSize(file.size)}</td><td className="table-cell"><button onClick={() => handleDeleteFile(file.name)} className="text-red-600">Удалить</button></td></tr>))}</tbody></table></div>
+            <div className="card overflow-hidden overflow-x-auto">
+              <table className="w-full min-w-[500px]">
+                <thead className="table-header">
+                  <tr>
+                    <th className="table-header-cell">Название</th>
+                    <th className="table-header-cell">Размер</th>
+                    <th className="table-header-cell"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {files.map((file: any) => (
+                    <tr key={file.name} className="table-row">
+                      <td className="table-cell font-medium">{file.name}</td>
+                      <td className="table-cell">{formatFileSize(file.size)}</td>
+                      <td className="table-cell">
+                        <button onClick={() => handleDeleteFile(file.name)} className="text-red-600">Удалить</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
 
       {activeTab === 'feedback' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center flex-wrap gap-3"><h2 className="text-xl font-semibold">Обратная связь</h2><button onClick={() => loadFeedback()} className="px-3 py-1 text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition">Обновить</button></div>
-          {feedbackLoading ? <div className="text-center py-12">Загрузка...</div> : feedbackList.length === 0 ? <div className="card p-12 text-center"><p className="text-slate-500">Нет сообщений</p></div> : isMobile ? (
+          <div className="flex justify-between items-center flex-wrap gap-3">
+            <h2 className="text-xl font-semibold">Обратная связь</h2>
+            <button onClick={() => loadFeedback()} className="px-3 py-1 text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+              Обновить
+            </button>
+          </div>
+          {feedbackLoading ? (
+            <div className="text-center py-12">Загрузка...</div>
+          ) : feedbackList.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-slate-500">Нет сообщений</p>
+            </div>
+          ) : isMobile ? (
             <div className="space-y-3">{feedbackList.map((item: any) => (<MobileFeedbackCard key={item.id} item={item} />))}</div>
           ) : (
             <>
               {feedbackStats && (
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                  <div className="bg-blue-100 dark:bg-blue-900/40 rounded-lg p-3 text-center"><div className="text-2xl font-bold text-blue-700 dark:text-blue-200">{feedbackStats.total}</div><div className="text-xs text-blue-600 dark:text-blue-300">Всего</div></div>
-                  <div className="bg-amber-100 dark:bg-amber-900/40 rounded-lg p-3 text-center"><div className="text-2xl font-bold text-amber-700 dark:text-amber-200">{feedbackStats.by_status?.new || 0}</div><div className="text-xs text-amber-600 dark:text-amber-300">Новые</div></div>
-                  <div className="bg-purple-100 dark:bg-purple-900/40 rounded-lg p-3 text-center"><div className="text-2xl font-bold text-purple-700 dark:text-purple-200">{feedbackStats.by_status?.in_progress || 0}</div><div className="text-xs text-purple-600 dark:text-purple-300">В работе</div></div>
-                  <div className="bg-emerald-100 dark:bg-emerald-900/40 rounded-lg p-3 text-center"><div className="text-2xl font-bold text-emerald-700 dark:text-emerald-200">{feedbackStats.by_status?.completed || 0}</div><div className="text-xs text-emerald-600 dark:text-emerald-300">Завершены</div></div>
-                  <div className="bg-rose-100 dark:bg-rose-900/40 rounded-lg p-3 text-center"><div className="text-2xl font-bold text-rose-700 dark:text-rose-200">{feedbackStats.by_type?.bug || 0}</div><div className="text-xs text-rose-600 dark:text-rose-300">Бaги</div></div>
-                  <div className="bg-emerald-100 dark:bg-emerald-900/40 rounded-lg p-3 text-center"><div className="text-2xl font-bold text-emerald-700 dark:text-emerald-200">{feedbackStats.by_type?.feature || 0}</div><div className="text-xs text-emerald-600 dark:text-emerald-300">Предложения</div></div>
+                  <div className="bg-blue-100 dark:bg-blue-900/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-200">{feedbackStats.total}</div>
+                    <div className="text-xs text-blue-600 dark:text-blue-300">Всего</div>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-amber-700 dark:text-amber-200">{feedbackStats.by_status?.new || 0}</div>
+                    <div className="text-xs text-amber-600 dark:text-amber-300">Новые</div>
+                  </div>
+                  <div className="bg-purple-100 dark:bg-purple-900/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-purple-700 dark:text-purple-200">{feedbackStats.by_status?.in_progress || 0}</div>
+                    <div className="text-xs text-purple-600 dark:text-purple-300">В работе</div>
+                  </div>
+                  <div className="bg-emerald-100 dark:bg-emerald-900/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-200">{feedbackStats.by_status?.completed || 0}</div>
+                    <div className="text-xs text-emerald-600 dark:text-emerald-300">Завершены</div>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-900/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-rose-700 dark:text-rose-200">{feedbackStats.by_type?.bug || 0}</div>
+                    <div className="text-xs text-rose-600 dark:text-rose-300">Бaги</div>
+                  </div>
+                  <div className="bg-emerald-100 dark:bg-emerald-900/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-200">{feedbackStats.by_type?.feature || 0}</div>
+                    <div className="text-xs text-emerald-600 dark:text-emerald-300">Предложения</div>
+                  </div>
                 </div>
               )}
               <div className="space-y-3">
                 {feedbackList.map((item: any) => (
                   <div key={item.id} className={`card p-4 ${item.status === 'new' ? 'border-l-4 border-l-amber-500' : ''}`}>
-                    <div className="flex justify-between flex-wrap gap-3 mb-3"><div className="flex gap-2 flex-wrap"><span className={`px-2 py-0.5 text-xs rounded-full ${item.type === 'bug' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : item.type === 'feature' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>{getFeedbackTypeLabel(item.type)}</span><span className={`px-2 py-0.5 text-xs rounded-full ${item.status === 'new' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : item.status === 'in_progress' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>{getFeedbackStatusLabel(item.status)}</span></div><div className="text-xs text-slate-400">{new Date(item.created_at).toLocaleString('ru-RU')}</div></div>
+                    <div className="flex justify-between flex-wrap gap-3 mb-3">
+                      <div className="flex gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${item.type === 'bug' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : item.type === 'feature' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                          {getFeedbackTypeLabel(item.type)}
+                        </span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${item.status === 'new' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : item.status === 'in_progress' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                          {getFeedbackStatusLabel(item.status)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-400">{new Date(item.created_at).toLocaleString('ru-RU')}</div>
+                    </div>
                     <h3 className="font-semibold text-slate-800 dark:text-white mb-2">{item.subject}</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{item.message}</p>
                     <div className="text-xs text-slate-400 mb-3">От: {item.user_name} ({item.user_email})</div>
-                    {item.admin_comment && <div className="mb-3 p-2 bg-slate-50 dark:bg-slate-700/50 rounded text-sm"><span className="font-medium">Ответ админа:</span> {item.admin_comment}</div>}
-                    <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700"><select value={item.status} onChange={(e) => updateFeedbackStatus(item.id, e.target.value)} className="text-sm px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer"><option value="new">Новое</option><option value="in_progress">В работе</option><option value="completed">Завершено</option></select><button onClick={() => openCommentModal(item)} className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 transition">Комментарий</button><button onClick={() => deleteFeedback(item.id)} className="text-sm px-3 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 transition">Удалить</button></div>
+                    {item.admin_comment && (
+                      <div className="mb-3 p-2 bg-slate-50 dark:bg-slate-700/50 rounded text-sm">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Ответ админа:</span> {item.admin_comment}
+                      </div>
+                    )}
+                    <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
+                      <select value={item.status} onChange={(e) => updateFeedbackStatus(item.id, e.target.value)} className="text-sm px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <option value="new">Новое</option>
+                        <option value="in_progress">В работе</option>
+                        <option value="completed">Завершено</option>
+                      </select>
+                      <button onClick={() => openCommentModal(item)} className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 transition">Комментарий</button>
+                      <button onClick={() => deleteFeedback(item.id)} className="text-sm px-3 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 transition">Удалить</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -984,17 +1330,192 @@ export const AdminPanel = () => {
       )}
 
       {/* Модальные окна */}
-      {showTestModal && (<><div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowTestModal(false)} /><div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto z-[1000000]"><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold">{editingTest ? 'Редактировать тест' : 'Создать тест'}</h2><button onClick={() => setShowTestModal(false)} className="text-slate-400">✕</button></div><form onSubmit={editingTest ? handleUpdateTest : handleCreateTest} className="space-y-4"><div><label className="form-label">Название теста *</label><input type="text" value={testFormTitle} onChange={(e) => setTestFormTitle(e.target.value)} className="form-input" required /></div><div><label className="form-label">Описание</label><textarea value={testFormDescription} onChange={(e) => setTestFormDescription(e.target.value)} className="form-input" rows={2} /></div><div><label className="form-label">ID раздела</label><input type="number" value={testFormSectionId || ''} onChange={(e) => setTestFormSectionId(e.target.value ? Number(e.target.value) : null)} className="form-input" /></div><div className="flex justify-end gap-3"><button type="button" onClick={() => setShowTestModal(false)} className="btn-outline">Отмена</button><button type="submit" className="btn-primary">{editingTest ? 'Сохранить' : 'Создать'}</button></div></form>{editingTest && (<div className="mt-8 pt-6 border-t"><div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold">Вопросы</h3><button type="button" onClick={addQuestionToForm} className="text-sm text-blue-600">+ Добавить вопрос</button></div><div className="space-y-4 max-h-[400px] overflow-y-auto">{testQuestions.length === 0 ? <p className="text-center text-slate-500 py-8">Нет вопросов</p> : testQuestions.map((q, idx) => (<div key={idx} className="border rounded-lg p-4 space-y-3"><div className="flex justify-between"><h4 className="font-medium">Вопрос {idx+1}</h4><button type="button" onClick={() => removeQuestionFromForm(idx)} className="text-red-500 text-sm">Удалить</button></div><input type="text" placeholder="Текст вопроса" value={q.question} onChange={(e) => updateQuestionInForm(idx, 'question', e.target.value)} className="form-input" /><input type="text" placeholder="Вариант 1" value={q.option1} onChange={(e) => updateQuestionInForm(idx, 'option1', e.target.value)} className="form-input" /><input type="text" placeholder="Вариант 2" value={q.option2} onChange={(e) => updateQuestionInForm(idx, 'option2', e.target.value)} className="form-input" /><input type="text" placeholder="Вариант 3" value={q.option3} onChange={(e) => updateQuestionInForm(idx, 'option3', e.target.value)} className="form-input" /><select value={q.correct_index} onChange={(e) => updateQuestionInForm(idx, 'correct_index', Number(e.target.value))} className="form-input"><option value={0}>Вариант 1</option><option value={1}>Вариант 2</option><option value={2}>Вариант 3</option></select></div>))}</div><div className="flex justify-end mt-4"><button type="button" onClick={saveQuestions} className="btn-primary">Сохранить вопросы</button></div></div>)}</div></>)}
+      {showTestModal && (
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowTestModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto z-[1000000]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{editingTest ? 'Редактировать тест' : 'Создать тест'}</h2>
+              <button onClick={() => setShowTestModal(false)} className="text-slate-400">✕</button>
+            </div>
+            <form onSubmit={editingTest ? handleUpdateTest : handleCreateTest} className="space-y-4">
+              <div>
+                <label className="form-label">Название теста *</label>
+                <input type="text" value={testFormTitle} onChange={(e) => setTestFormTitle(e.target.value)} className="form-input" required />
+              </div>
+              <div>
+                <label className="form-label">Описание</label>
+                <textarea value={testFormDescription} onChange={(e) => setTestFormDescription(e.target.value)} className="form-input" rows={2} />
+              </div>
+              <div>
+                <label className="form-label">ID раздела</label>
+                <input type="number" value={testFormSectionId || ''} onChange={(e) => setTestFormSectionId(e.target.value ? Number(e.target.value) : null)} className="form-input" />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setShowTestModal(false)} className="btn-outline">Отмена</button>
+                <button type="submit" className="btn-primary">{editingTest ? 'Сохранить' : 'Создать'}</button>
+              </div>
+            </form>
+            {editingTest && (
+              <div className="mt-8 pt-6 border-t">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Вопросы</h3>
+                  <button type="button" onClick={addQuestionToForm} className="text-sm text-blue-600">+ Добавить вопрос</button>
+                </div>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                  {testQuestions.length === 0 ? (
+                    <p className="text-center text-slate-500 py-8">Нет вопросов</p>
+                  ) : (
+                    testQuestions.map((q, idx) => (
+                      <div key={idx} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex justify-between">
+                          <h4 className="font-medium">Вопрос {idx+1}</h4>
+                          <button type="button" onClick={() => removeQuestionFromForm(idx)} className="text-red-500 text-sm">Удалить</button>
+                        </div>
+                        <input type="text" placeholder="Текст вопроса" value={q.question} onChange={(e) => updateQuestionInForm(idx, 'question', e.target.value)} className="form-input" />
+                        <input type="text" placeholder="Вариант 1" value={q.option1} onChange={(e) => updateQuestionInForm(idx, 'option1', e.target.value)} className="form-input" />
+                        <input type="text" placeholder="Вариант 2" value={q.option2} onChange={(e) => updateQuestionInForm(idx, 'option2', e.target.value)} className="form-input" />
+                        <input type="text" placeholder="Вариант 3" value={q.option3} onChange={(e) => updateQuestionInForm(idx, 'option3', e.target.value)} className="form-input" />
+                        <select value={q.correct_index} onChange={(e) => updateQuestionInForm(idx, 'correct_index', Number(e.target.value))} className="form-input">
+                          <option value={0}>Вариант 1</option>
+                          <option value={1}>Вариант 2</option>
+                          <option value={2}>Вариант 3</option>
+                        </select>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button type="button" onClick={saveQuestions} className="btn-primary">Сохранить вопросы</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
-      {showModal && (<><div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowModal(false)} /><div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto z-[1000000]"><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold">{editingSection ? 'Редактировать раздел' : 'Новый раздел'}</h2><button onClick={() => setShowModal(false)} className="text-slate-400">✕</button></div><form onSubmit={handleSubmitSection} className="space-y-4"><input type="text" placeholder="Название" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} className="form-input" required /><textarea placeholder="Содержание" value={formContent} onChange={(e) => setFormContent(e.target.value)} rows={10} className="form-input" required />{!editingSection && <input type="file" multiple accept="image/*" onChange={(e) => setFormPhotos(Array.from(e.target.files || []))} className="form-input" />}<div className="flex justify-end gap-3"><button type="button" onClick={() => setShowModal(false)} className="btn-outline">Отмена</button><button type="submit" className="btn-primary">{editingSection ? 'Сохранить' : 'Создать'}</button></div></form></div></>)}
+      {showModal && (
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto z-[1000000]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{editingSection ? 'Редактировать раздел' : 'Новый раздел'}</h2>
+              <button onClick={() => setShowModal(false)} className="text-slate-400">✕</button>
+            </div>
+            <form onSubmit={handleSubmitSection} className="space-y-4">
+              <input type="text" placeholder="Название" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} className="form-input" required />
+              <textarea placeholder="Содержание" value={formContent} onChange={(e) => setFormContent(e.target.value)} rows={10} className="form-input" required />
+              {!editingSection && (
+                <input type="file" multiple accept="image/*" onChange={(e) => setFormPhotos(Array.from(e.target.files || []))} className="form-input" />
+              )}
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setShowModal(false)} className="btn-outline">Отмена</button>
+                <button type="submit" className="btn-primary">{editingSection ? 'Сохранить' : 'Создать'}</button>
+              </div>
+            </form>
+          </div>
+        </>
+      )}
 
-      {showPhotoModal && selectedSection && (<><div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowPhotoModal(false)} /><div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto z-[1000000]"><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold">Фото: {selectedSection.title}</h2><button onClick={() => setShowPhotoModal(false)} className="text-slate-400">✕</button></div><div className="mb-6"><h3 className="font-medium mb-3">Текущие фото ({sectionPhotos.length}/7)</h3><div className="grid grid-cols-3 gap-3">{sectionPhotos.map((photo: any) => (<div key={photo.slot} className="relative group"><img src={`/assets/${photo.url}`} className="w-full h-32 object-cover rounded-lg" /><button onClick={() => handleDeletePhoto(photo.slot)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100">✕</button></div>))}</div></div>{sectionPhotos.length < 7 && (<form onSubmit={handleAddPhotos} className="space-y-3"><input type="file" multiple accept="image/*" onChange={(e) => setFormPhotos(Array.from(e.target.files || []))} className="form-input" /><button type="submit" className="btn-primary">Загрузить</button></form>)}</div></>)}
+      {showPhotoModal && selectedSection && (
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowPhotoModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto z-[1000000]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Фото: {selectedSection.title}</h2>
+              <button onClick={() => setShowPhotoModal(false)} className="text-slate-400">✕</button>
+            </div>
+            <div className="mb-6">
+              <h3 className="font-medium mb-3">Текущие фото ({sectionPhotos.length}/7)</h3>
+              <div className="grid grid-cols-3 gap-3">
+                {sectionPhotos.map((photo: any) => (
+                  <div key={photo.slot} className="relative group">
+                    <img src={`/assets/${photo.url}`} className="w-full h-32 object-cover rounded-lg" />
+                    <button onClick={() => handleDeletePhoto(photo.slot)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100">✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {sectionPhotos.length < 7 && (
+              <form onSubmit={handleAddPhotos} className="space-y-3">
+                <input type="file" multiple accept="image/*" onChange={(e) => setFormPhotos(Array.from(e.target.files || []))} className="form-input" />
+                <button type="submit" className="btn-primary">Загрузить</button>
+              </form>
+            )}
+          </div>
+        </>
+      )}
 
-      {showChecklistModal && (<><div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowChecklistModal(false)} /><div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto z-[1000000]"><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold">{editingTask ? 'Редактировать задачу' : 'Новая задача'}</h2><button onClick={() => setShowChecklistModal(false)} className="text-slate-400">✕</button></div><form onSubmit={handleSubmitTask} className="space-y-4"><div><label className="form-label">Тип смены</label><select value={taskShiftType} onChange={(e) => setTaskShiftType(e.target.value)} className="form-input"><option value="day">Дневная смена</option><option value="night">Ночная смена</option></select></div><div><label className="form-label">Порядок</label><input type="number" value={taskOrder} onChange={(e) => setTaskOrder(Number(e.target.value))} className="form-input" required /></div><div><label className="form-label">Текст задачи</label><textarea value={taskText} onChange={(e) => setTaskText(e.target.value)} rows={3} className="form-input" required /></div><div><label className="form-label">Подсказка (необязательно)</label><textarea value={taskHint} onChange={(e) => setTaskHint(e.target.value)} rows={3} className="form-input" placeholder="Дополнительная информация для сотрудника..." /></div><div className="flex justify-end gap-3"><button type="button" onClick={() => setShowChecklistModal(false)} className="btn-outline">Отмена</button><button type="submit" className="btn-primary">{editingTask ? 'Сохранить' : 'Создать'}</button></div></form></div></>)}
+      {showChecklistModal && (
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowChecklistModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto z-[1000000]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{editingTask ? 'Редактировать задачу' : 'Новая задача'}</h2>
+              <button onClick={() => setShowChecklistModal(false)} className="text-slate-400">✕</button>
+            </div>
+            <form onSubmit={handleSubmitTask} className="space-y-4">
+              <div>
+                <label className="form-label">Тип смены</label>
+                <select value={taskShiftType} onChange={(e) => setTaskShiftType(e.target.value)} className="form-input">
+                  <option value="day">Дневная смена</option>
+                  <option value="night">Ночная смена</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Порядок</label>
+                <input type="number" value={taskOrder} onChange={(e) => setTaskOrder(Number(e.target.value))} className="form-input" required />
+              </div>
+              <div>
+                <label className="form-label">Текст задачи</label>
+                <textarea value={taskText} onChange={(e) => setTaskText(e.target.value)} rows={3} className="form-input" required />
+              </div>
+              <div>
+                <label className="form-label">Подсказка (необязательно)</label>
+                <textarea value={taskHint} onChange={(e) => setTaskHint(e.target.value)} rows={3} className="form-input" placeholder="Дополнительная информация для сотрудника..." />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setShowChecklistModal(false)} className="btn-outline">Отмена</button>
+                <button type="submit" className="btn-primary">{editingTask ? 'Сохранить' : 'Создать'}</button>
+              </div>
+            </form>
+          </div>
+        </>
+      )}
 
-      {showNewsModal && (<><div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowNewsModal(false)} /><div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto z-[1000000]"><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold">{editingNews ? 'Редактировать новость' : 'Новая новость'}</h2><button onClick={() => setShowNewsModal(false)} className="text-slate-400">✕</button></div><form onSubmit={handleSubmitNews} className="space-y-4"><input type="text" placeholder="Заголовок" value={newsTitle} onChange={(e) => setNewsTitle(e.target.value)} className="form-input" required /><textarea placeholder="Текст новости" value={newsContent} onChange={(e) => setNewsContent(e.target.value)} rows={5} className="form-input" required /><div className="flex justify-end gap-3"><button type="button" onClick={() => setShowNewsModal(false)} className="btn-outline">Отмена</button><button type="submit" className="btn-primary">{editingNews ? 'Сохранить' : 'Опубликовать'}</button></div></form></div></>)}
+      {showNewsModal && (
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" onClick={() => setShowNewsModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto z-[1000000]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{editingNews ? 'Редактировать новость' : 'Новая новость'}</h2>
+              <button onClick={() => setShowNewsModal(false)} className="text-slate-400">✕</button>
+            </div>
+            <form onSubmit={handleSubmitNews} className="space-y-4">
+              <input type="text" placeholder="Заголовок" value={newsTitle} onChange={(e) => setNewsTitle(e.target.value)} className="form-input" required />
+              <textarea placeholder="Текст новости" value={newsContent} onChange={(e) => setNewsContent(e.target.value)} rows={5} className="form-input" required />
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setShowNewsModal(false)} className="btn-outline">Отмена</button>
+                <button type="submit" className="btn-primary">{editingNews ? 'Сохранить' : 'Опубликовать'}</button>
+              </div>
+            </form>
+          </div>
+        </>
+      )}
 
-      {showCommentModal && selectedFeedback && (<><div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowCommentModal(false)} /><div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-lg z-50"><h3 className="text-lg font-semibold mb-4">Комментарий к сообщению</h3><textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} className="w-full px-3 py-2 border rounded-lg" rows={4} placeholder="Введите комментарий..." /><div className="flex justify-end gap-3 mt-4"><button onClick={() => setShowCommentModal(false)} className="btn-outline">Отмена</button><button onClick={saveComment} className="btn-primary">Сохранить</button></div></div></>)}
+      {showCommentModal && selectedFeedback && (
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowCommentModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-lg z-50">
+            <h3 className="text-lg font-semibold mb-4">Комментарий к сообщению</h3>
+            <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} className="w-full px-3 py-2 border rounded-lg" rows={4} placeholder="Введите комментарий..." />
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => setShowCommentModal(false)} className="btn-outline">Отмена</button>
+              <button onClick={saveComment} className="btn-primary">Сохранить</button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -4,6 +4,8 @@ import { checklistsService } from '../../services/checklistsService';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { ChecklistSkeleton } from '../../components/SkeletonLoader';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export const ChecklistDetail = () => {
   const { type } = useParams();
@@ -169,7 +171,6 @@ export const ChecklistDetail = () => {
                 {task.text}
               </span>
               
-              {/* Кнопка подсказки — появляется ТОЛЬКО если есть hint */}
               {task.hint && (
                 <button
                   onClick={() => {
@@ -188,14 +189,14 @@ export const ChecklistDetail = () => {
         </div>
       </div>
 
-      {/* Модальное окно подсказки */}
+      {/* Модальное окно подсказки с поддержкой Markdown */}
       {showHintModal && (
         <>
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-40" 
             onClick={() => setShowHintModal(false)} 
           />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-md z-50 shadow-2xl">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-md max-h-[80vh] overflow-y-auto z-50 shadow-2xl">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
                 {hintTaskName}
@@ -207,8 +208,10 @@ export const ChecklistDetail = () => {
                 ✕
               </button>
             </div>
-            <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-              {hintText}
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {hintText}
+              </ReactMarkdown>
             </div>
             <button
               onClick={() => setShowHintModal(false)}
@@ -222,4 +225,3 @@ export const ChecklistDetail = () => {
     </div>
   );
 };
-

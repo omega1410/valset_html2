@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { debounce } from 'lodash';
 import { useMobile } from '../../hooks/useMobile';
 import { MobileLogbookCard } from '../../components/MobileCards/MobileLogbookCard';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export const Logbook = () => {
   const { user, isAdmin } = useAuthStore();
@@ -27,6 +28,13 @@ export const Logbook = () => {
   const [formImportant, setFormImportant] = useState(false);
 
   const isMobile = useMobile();
+
+  // ========== АВТО-ОБНОВЛЕНИЕ ==========
+  useAutoRefresh({
+    queryKeys: [['logbook']],
+    interval: 30000,
+    enabled: !showHistory,
+  });
 
   // Дебаунс поиска (ждём 300мс после последнего ввода)
   const debouncedSetSearch = useRef(

@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { WeatherWidget } from '../components/Weather/WeatherWidget';
 import { WeatherEffects } from '../components/Weather/WeatherEffects';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -32,6 +33,13 @@ export const Dashboard = () => {
 
   const isBirthday = checkBirthday(user?.birthday);
   const greeting = getGreeting();
+
+  // ========== АВТО-ОБНОВЛЕНИЕ СТАТИСТИКИ ==========
+  useAutoRefresh({
+    queryKeys: [['stats', 'dashboard']],
+    interval: 60000,
+    enabled: true,
+  });
 
   useEffect(() => {
     loadStats();

@@ -45,10 +45,12 @@ export const MobileLogbookCard = ({
   return (
     <div className={`bg-white dark:bg-slate-800 rounded-lg p-4 mb-3 shadow-sm border ${entry.is_important ? 'border-l-4 border-l-amber-500' : 'border-slate-200 dark:border-slate-700'}`}>
       <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-slate-400">№{entry.id}</span>
           {getStatusBadge(entry.status)}
-          {entry.is_important && <span className="text-amber-500">⭐</span>}
+          {entry.is_important === true && (
+            <span className="text-amber-500 text-sm">⭐</span>
+          )}
         </div>
         <span className="text-xs text-slate-400">{formatDate(entry.created_at)}</span>
       </div>
@@ -68,7 +70,7 @@ export const MobileLogbookCard = ({
             {entry.status === 'completed' ? '↺ Вернуть' : '✓ Выполнить'}
           </button>
           <button onClick={() => onToggleImportant(entry.id)} className="px-3 py-1.5 text-sm bg-amber-100 dark:bg-amber-900/30 text-amber-700 rounded-lg">
-            {entry.is_important ? '☆' : '⭐'}
+            {entry.is_important ? '☆ Убрать' : '⭐ Важное'}
           </button>
           {entry.status !== 'completed' && (
             <button onClick={() => onEdit(entry)} className="px-3 py-1.5 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 rounded-lg">

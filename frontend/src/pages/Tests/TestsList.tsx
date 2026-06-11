@@ -3,11 +3,19 @@ import { Link } from 'react-router-dom';
 import { useTests } from '../../hooks/useTests';
 import { CardSkeleton } from '../../components/SkeletonLoader';
 import { TestAttempts } from '../../components/TestAttempts/TestAttempts';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export const TestsList = () => {
   const { data: tests, isLoading, error } = useTests();
   const [activeTab, setActiveTab] = useState<'simple' | 'extended'>('simple');
   const [showAttemptsFor, setShowAttemptsFor] = useState<number | null>(null);
+
+  // ========== АВТО-ОБНОВЛЕНИЕ СПИСКА ТЕСТОВ ==========
+  useAutoRefresh({
+    queryKeys: [['tests']],
+    interval: 20000,
+    enabled: true,
+  });
 
   if (error) {
     return (

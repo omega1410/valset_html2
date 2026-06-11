@@ -90,6 +90,7 @@ export const Layout = () => {
 
               <div className="flex items-center gap-3 pl-6 border-l border-slate-200 dark:border-slate-700 transition-colors duration-200">
                 <button
+                  id="theme-toggle"
                   onClick={toggleTheme}
                   className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-all duration-200"
                   aria-label="Переключить тему"
@@ -100,6 +101,7 @@ export const Layout = () => {
                 {/* Профиль */}
                 <div className="relative">
                   <button
+                    id="profile-button"
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                     className="flex items-center gap-2 focus:outline-none"
                   >

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSections, useSearchSections } from '../../hooks/useSections';
 import { SearchBar } from '../../components/Sections/SearchBar';
 import { CardSkeleton } from '../../components/SkeletonLoader';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export const SectionsList = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +23,13 @@ export const SectionsList = () => {
     : (sectionsData?.items || []);
   
   const totalPages = searchQuery ? 1 : Math.ceil((sectionsData?.total || 0) / itemsPerPage);
+
+  // ========== АВТО-ОБНОВЛЕНИЕ РАЗДЕЛОВ ==========
+  useAutoRefresh({
+    queryKeys: [['sections']],
+    interval: 30000,
+    enabled: !searchQuery,
+  });
 
   const handleClear = () => {
     setSearchQuery('');

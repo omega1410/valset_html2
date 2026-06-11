@@ -54,7 +54,6 @@ export const WeatherWidget = () => {
     return () => clearInterval(interval);
   }, [API_KEY, LAT, LON]);
 
-  // Форматирование описания: первая буква заглавная, остальные маленькие
   const formatDescription = (text: string) => {
     if (!text) return '';
     return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
@@ -62,15 +61,15 @@ export const WeatherWidget = () => {
 
   if (loading) {
     return (
-      <div className="bg-slate-800/90 rounded-2xl px-5 py-3 shadow-xl border border-slate-600">
-        <div className="text-white text-xl">🌡️ --°C</div>
+      <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-5 py-3 shadow-xl border border-white/20">
+        <div className="text-white/80 text-xl animate-pulse">🌡️ --°C</div>
       </div>
     );
   }
 
   if (error || !weather) {
     return (
-      <div className="bg-slate-800/90 rounded-2xl px-5 py-3 shadow-xl border border-slate-600">
+      <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-5 py-3 shadow-xl border border-white/20">
         <div className="text-white/60 text-xl">🌡️ --°C</div>
       </div>
     );
@@ -79,7 +78,7 @@ export const WeatherWidget = () => {
   const iconUrl = `https://openweathermap.org/img/wn/${weather.icon}@2x.png`;
 
   return (
-    <div className="bg-slate-800/90 rounded-2xl px-5 py-3 shadow-xl border border-slate-600 inline-block">
+    <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-5 py-3 shadow-xl border border-white/25 transition-all duration-300 hover:bg-black/50">
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
           <img 
@@ -91,8 +90,8 @@ export const WeatherWidget = () => {
         </div>
         
         <div>
-          <div className="text-5xl font-black text-white">{weather.temp}°</div>
-          <div className="text-sm text-slate-300">
+          <div className="text-5xl font-black text-white drop-shadow-md">{weather.temp}°</div>
+          <div className="text-sm text-white/90">
             {formatDescription(weather.description)}
           </div>
           <div className="flex gap-3 mt-2 text-xs text-white/70">

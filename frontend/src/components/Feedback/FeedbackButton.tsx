@@ -11,8 +11,8 @@ export const FeedbackButton = () => {
   const [type, setType] = useState('bug');
   const [loading, setLoading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  const isMobile = window.innerWidth < 768;
 
-  // Закрытие по клику вне окна
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -22,10 +22,12 @@ export const FeedbackButton = () => {
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = '';
     };
   }, [isOpen]);
 
@@ -55,11 +57,9 @@ export const FeedbackButton = () => {
 
   return (
     <>
-      {/* Круглая кнопка фидбека */}
       <button
         onClick={() => setIsOpen(true)}
-        className="w-12 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center text-white"
-        style={{ height: '48px' }}
+        className="w-12 h-12 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center text-white"
         title="Обратная связь"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,22 +67,27 @@ export const FeedbackButton = () => {
         </svg>
       </button>
 
-      {/* Модальное окно */}
       {isOpen && (
         <>
           {/* Затемнение фона */}
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" />
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsOpen(false)}
+          />
           
-          {/* Окно фидбека */}
           <div
             ref={modalRef}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-lg z-50"
+            className={`fixed bg-white dark:bg-slate-800 rounded-xl p-6 w-full z-50 shadow-2xl
+              ${isMobile 
+                ? 'bottom-0 left-0 right-0 rounded-b-none rounded-t-xl max-h-[90vh] overflow-y-auto' 
+                : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-lg'
+              }`}
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Обратная связь</h2>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-2xl"
               >
                 ✕
               </button>

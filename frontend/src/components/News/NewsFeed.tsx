@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { newsService } from '../../services/newsService';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export const NewsFeed = () => {
   const [news, setNews] = useState([]);
@@ -24,7 +26,6 @@ export const NewsFeed = () => {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    // Добавляем 3 часа для МСК
     date.setHours(date.getHours() + 3);
     return date.toLocaleString('ru-RU', {
       day: '2-digit',
@@ -37,7 +38,7 @@ export const NewsFeed = () => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-md">
         <div className="animate-pulse space-y-3">
           <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div>
           <div className="h-16 bg-slate-200 dark:bg-slate-700 rounded"></div>
@@ -48,14 +49,14 @@ export const NewsFeed = () => {
 
   if (news.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 text-center">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 text-center shadow-md">
         <p className="text-slate-500 dark:text-slate-400">Нет новостей</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-200">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-md transition-all duration-200 hover:shadow-lg">
       <div className="max-h-[502px] overflow-y-auto">
         {news.map((item: any) => (
           <div key={item.id} className="p-4 border-b border-slate-100 dark:border-slate-700 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors duration-150">
@@ -65,7 +66,14 @@ export const NewsFeed = () => {
                 {formatDate(item.created_at)}
               </span>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400">{item.content}</p>
+            
+            {/* Markdown контент */}
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {item.content}
+              </ReactMarkdown>
+            </div>
+            
             <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
               Автор: {item.author_name}
             </div>
