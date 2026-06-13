@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSections, useSearchSections } from '../../hooks/useSections';
 import { SearchBar } from '../../components/Sections/SearchBar';
 import { CardSkeleton } from '../../components/SkeletonLoader';
+import { SectionCard } from '../../components/Sections/SectionCard';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 export const SectionsList = () => {
@@ -159,26 +160,8 @@ export const SectionsList = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {displayedSections.map((section: any) => (
-              <Link
-                key={section.id}
-                to={`/sections/${section.id}`}
-                state={{ title: section.title }}
-                className="card p-5 hover:shadow-md transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 block group hover:-translate-y-1"
-              >
-                <h3 className="font-semibold text-slate-800 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
-                  {section.title}
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3">
-                  {getPreviewContent(section.content)}
-                </p>
-                <div className="mt-3 text-blue-600 dark:text-blue-400 text-sm font-medium flex items-center gap-1 transition-all duration-200 group-hover:gap-2">
-                  Подробнее 
-                  <svg className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
+            {displayedSections.map((section: any, idx: number) => (
+              <SectionCard key={section.id} section={section} index={idx} />
             ))}
           </div>
           

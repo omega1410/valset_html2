@@ -48,13 +48,12 @@ export const FilesList = () => {
 
   const getFileIcon = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'pdf': return '📄';
-      case 'doc': case 'docx': return '📝';
-      case 'xls': case 'xlsx': return '📊';
-      case 'jpg': case 'jpeg': case 'png': return '🖼️';
-      default: return '📁';
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '');
+    
+    if (isImage) {
+      return '/assets/files/image.svg';
     }
+    return '/assets/files/file.svg';
   };
 
   const getFileType = (filename: string) => {
@@ -68,11 +67,16 @@ export const FilesList = () => {
     }
   };
 
-  // Мобильная карточка файла
   const MobileFileCard = ({ file }: { file: any }) => (
     <div className="bg-white dark:bg-slate-800 rounded-lg p-4 mb-3 shadow-sm border border-slate-200 dark:border-slate-700">
       <div className="flex items-start gap-3">
-        <div className="text-3xl">{getFileIcon(file.name)}</div>
+        <div className="text-3xl">
+          <img 
+            src={getFileIcon(file.name)} 
+            alt="icon" 
+            className="w-8 h-8 dark:invert"
+          />
+        </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-medium text-slate-800 dark:text-white text-sm break-words">{file.name}</h3>
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
@@ -103,7 +107,6 @@ export const FilesList = () => {
         <p className="page-subtitle">Бланки, формы и нормативные документы</p>
       </div>
 
-      {/* ПОИСК */}
       <div className="relative">
         <input
           type="text"
@@ -123,7 +126,7 @@ export const FilesList = () => {
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -132,7 +135,6 @@ export const FilesList = () => {
         )}
       </div>
 
-      {/* Результаты поиска */}
       {searchQuery && (
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Найдено: {filteredFiles.length} {filteredFiles.length === 1 ? 'файл' : filteredFiles.length < 5 ? 'файла' : 'файлов'}
@@ -149,7 +151,7 @@ export const FilesList = () => {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+              className="mt-3 text-sm text-blue-600 hover:text-blue-700"
             >
               Очистить поиск
             </button>
@@ -158,7 +160,9 @@ export const FilesList = () => {
       ) : isMobile ? (
         <div className="space-y-3">
           {filteredFiles.map((file, index) => (
-            <MobileFileCard key={index} file={file} />
+            <div key={index} className="stagger-fade" style={{ animationDelay: `${index * 0.05}s` }}>
+              <MobileFileCard file={file} />
+            </div>
           ))}
         </div>
       ) : (
@@ -176,8 +180,14 @@ export const FilesList = () => {
               </thead>
               <tbody>
                 {filteredFiles.map((file, index) => (
-                  <tr key={index} className="table-row">
-                    <td className="table-cell text-2xl">{getFileIcon(file.name)}</td>
+                  <tr key={index} className="table-row stagger-fade" style={{ animationDelay: `${index * 0.05}s` }}>
+                    <td className="table-cell">
+                      <img 
+                        src={getFileIcon(file.name)} 
+                        alt="icon" 
+                        className="w-6 h-6 dark:invert"
+                      />
+                    </td>
                     <td className="table-cell font-medium text-slate-800 dark:text-white break-words max-w-md">
                       {file.name}
                     </td>

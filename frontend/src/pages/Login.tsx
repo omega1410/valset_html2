@@ -28,6 +28,7 @@ export const Login = () => {
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -217,7 +218,7 @@ export const Login = () => {
 
           <div className="mt-4 text-center">
             <button
-              onClick={() => setForgotPasswordMode(true)}
+              onClick={() => setShowResetModal(true)}
               className="text-sm text-white/50 hover:text-white/70 transition"
             >
               Забыли пароль?
@@ -229,6 +230,55 @@ export const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* Модальное окно с подсказкой о сбросе пароля */}
+      {showResetModal && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-50" 
+            onClick={() => setShowResetModal(false)} 
+          />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-md z-50 shadow-2xl modal-animate">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
+                Восстановление пароля
+              </h3>
+              <button 
+                onClick={() => setShowResetModal(false)} 
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Если вы забыли пароль, обратитесь к нашему Telegram-боту:
+              </p>
+              
+              <a
+                href="https://t.me/resetpassvalset_bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
+              >
+                @resetpassvalset_bot
+              </a>
+              
+              <p className="text-xs text-slate-400 text-center">
+                Напишите боту, и он поможет восстановить доступ
+              </p>
+            </div>
+            
+            <button
+              onClick={() => setShowResetModal(false)}
+              className="mt-5 w-full btn-outline"
+            >
+              Закрыть
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

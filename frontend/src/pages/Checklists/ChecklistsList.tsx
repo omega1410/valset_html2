@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { checklistsService } from '../../services/checklistsService';
-import { CardSkeleton } from '../../components/SkeletonLoader';  // 👈 ДОБАВИТЬ ИМПОРТ
+import { CardSkeleton } from '../../components/SkeletonLoader';
 
 export const ChecklistsList = () => {
   const [types, setTypes] = useState([]);
@@ -23,7 +23,9 @@ export const ChecklistsList = () => {
   };
 
   const getIcon = (type: string) => {
-    return type === 'day' ? '🌞' : '🌙';
+    return type === 'day' 
+      ? '/assets/checklists/day.svg'
+      : '/assets/checklists/night.svg';
   };
 
   const getBgClass = (type: string) => {
@@ -40,27 +42,31 @@ export const ChecklistsList = () => {
       </div>
 
       {loading ? (
-        // ПОКАЗЫВАЕМ 2 СКЕЛЕТОНА (так как чек-листов всегда 2: день и ночь)
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {[1, 2].map((i) => (
             <CardSkeleton key={i} />
           ))}
         </div>
       ) : types.length === 0 ? (
-        // ЕСЛИ НЕТ ЧЕК-ЛИСТОВ
         <div className="card p-12 text-center">
           <p className="text-slate-500 dark:text-slate-400">Нет доступных чек-листов</p>
         </div>
       ) : (
-        // ПОКАЗЫВАЕМ ЧЕК-ЛИСТЫ
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {types.map((item: any) => (
+          {types.map((item: any, index: number) => (
             <Link
               key={item.type}
               to={`/checklists/${item.type}`}
-              className={`block rounded-xl border p-6 hover:shadow-md transition ${getBgClass(item.type)}`}
+              className={`block rounded-xl border p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 stagger-fade ${getBgClass(item.type)}`}
+              style={{ animationDelay: `${index * 0.08}s` }}
             >
-              <div className="text-4xl mb-3">{getIcon(item.type)}</div>
+              <div className="text-4xl mb-3">
+                <img 
+                  src={getIcon(item.type)} 
+                  alt={item.name}
+                  className="w-12 h-12 invert dark:invert-0"
+                />
+              </div>
               <h3 className="text-xl font-semibold text-slate-800 dark:text-white">{item.name}</h3>
               <p className="text-slate-500 dark:text-slate-400 mt-1">{item.tasks_count} задач</p>
             </Link>

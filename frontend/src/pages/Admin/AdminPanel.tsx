@@ -23,6 +23,25 @@ import toast from 'react-hot-toast';
 import { useMobile } from '../../hooks/useMobile';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useQueryClient } from '@tanstack/react-query';
+import { 
+  FileText, 
+  Users, 
+  BookOpen, 
+  ClipboardList, 
+  Newspaper, 
+  FolderOpen, 
+  MessageSquare,
+  Trash2,
+  Edit3,
+  Plus,
+  X,
+  HelpCircle,
+  Bug,
+  Lightbulb,
+  CheckCircle,
+  Clock,
+  AlertCircle
+} from 'lucide-react';
 
 function SortableSectionRow({ section, onEdit, onDelete, onPhoto }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
@@ -39,7 +58,7 @@ function SortableSectionRow({ section, onEdit, onDelete, onPhoto }) {
         <svg className="w-5 h-5 inline-block text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
         </svg>
-      </td>
+       </td>
       <td className="table-cell text-slate-600 dark:text-slate-400">{section.id}</td>
       <td className="table-cell font-medium text-slate-800 dark:text-white">{section.title}</td>
       <td className="table-cell space-x-3">
@@ -112,6 +131,19 @@ export const AdminPanel = () => {
   );
 
   const [orderedSections, setOrderedSections] = useState([]);
+
+  const formatFeedbackDate = (dateStr: string) => {
+    if (!dateStr) return '—';
+    const date = new Date(dateStr);
+    date.setHours(date.getHours() + 3);
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // ========== АВТО-ОБНОВЛЕНИЕ ==========
   useAutoRefresh({
@@ -573,10 +605,9 @@ export const AdminPanel = () => {
 
   const removeQuestionFromForm = async (index: number) => {
     const question = testQuestions[index];
-  
+    
     if (!confirm('Удалить вопрос?')) return;
-  
-    // Если вопрос уже сохранён в БД (есть id) — удаляем через API
+    
     if (question.id) {
       try {
         await testsAdminService.deleteQuestion(question.id);
@@ -587,12 +618,11 @@ export const AdminPanel = () => {
         return;
       }
     }
-  
-    // Удаляем из локального state
+    
     const newQuestions = [...testQuestions];
-      newQuestions.splice(index, 1);
-      newQuestions.forEach((q, idx) => { q.order_num = idx + 1; });
-      setTestQuestions(newQuestions);
+    newQuestions.splice(index, 1);
+    newQuestions.forEach((q, idx) => { q.order_num = idx + 1; });
+    setTestQuestions(newQuestions);
   };
 
   const saveQuestions = async () => {
@@ -724,7 +754,6 @@ export const AdminPanel = () => {
     }
   };
 
-
   // ========== НОВОСТИ ==========
   const openNewsModal = (item?: any) => {
     if (item) {
@@ -806,6 +835,24 @@ export const AdminPanel = () => {
     }
   };
 
+  const getFeedbackTypeIcon = (type: string) => {
+    switch(type) {
+      case 'bug': return <Bug size={14} />;
+      case 'feature': return <Lightbulb size={14} />;
+      case 'question': return <HelpCircle size={14} />;
+      default: return <MessageSquare size={14} />;
+    }
+  };
+
+  const getFeedbackStatusIcon = (status: string) => {
+    switch(status) {
+      case 'new': return <AlertCircle size={14} />;
+      case 'in_progress': return <Clock size={14} />;
+      case 'completed': return <CheckCircle size={14} />;
+      default: return null;
+    }
+  };
+
   // ========== МОБИЛЬНЫЕ КАРТОЧКИ ==========
   const MobileUserCard = ({ user }: { user: any }) => (
     <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border border-slate-200 dark:border-slate-700">
@@ -817,7 +864,9 @@ export const AdminPanel = () => {
       </div>
       <div className="text-sm text-slate-500 mb-3">{user.email}</div>
       <div className="flex justify-end">
-        <button onClick={() => handleDeleteUser(user.id, user.role)} className="text-red-600 text-sm">Удалить</button>
+        <button onClick={() => handleDeleteUser(user.id, user.role)} className="text-red-600 text-sm flex items-center gap-1">
+          <Trash2 size={14} /> Удалить
+        </button>
       </div>
     </div>
   );
@@ -827,16 +876,22 @@ export const AdminPanel = () => {
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-slate-800 dark:text-white">{test.title}</h3>
         <div className="flex gap-2">
-          <button onClick={() => openEditTestModal(test.id)} className="text-blue-600 dark:text-blue-400 text-sm">✎</button>
-          <button onClick={() => handleDeleteTest(test.id)} className="text-red-600 dark:text-red-400 text-sm">✕</button>
+          <button onClick={() => openEditTestModal(test.id)} className="text-blue-600 dark:text-blue-400">
+            <Edit3 size={16} />
+          </button>
+          <button onClick={() => handleDeleteTest(test.id)} className="text-red-600 dark:text-red-400">
+            <Trash2 size={16} />
+          </button>
         </div>
       </div>
       {test.description && <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">{test.description}</p>}
       <div className="flex justify-between items-center text-sm">
         <span className="text-slate-500 dark:text-slate-400">📘 {test.questions_count} вопросов</span>
-        {test.section_id && <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded"></span>}
+        {test.section_id && <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">Раздел {test.section_id}</span>}
       </div>
-      <button onClick={() => openEditTestModal(test.id)} className="mt-3 w-full btn-outline text-sm py-2">Редактировать вопросы</button>
+      <button onClick={() => openEditTestModal(test.id)} className="mt-3 w-full btn-outline text-sm py-2 flex items-center justify-center gap-2">
+        <Edit3 size={14} /> Редактировать вопросы
+      </button>
     </div>
   );
 
@@ -855,8 +910,12 @@ export const AdminPanel = () => {
         </div>
       )}
       <div className="flex gap-2 justify-end">
-        <button onClick={() => openTaskModal(task)} className="text-blue-600 text-sm">Ред.</button>
-        <button onClick={() => handleDeleteTask(task.id)} className="text-red-600 text-sm">Уд.</button>
+        <button onClick={() => openTaskModal(task)} className="text-blue-600 text-sm flex items-center gap-1">
+          <Edit3 size={14} /> Ред.
+        </button>
+        <button onClick={() => handleDeleteTask(task.id)} className="text-red-600 text-sm flex items-center gap-1">
+          <Trash2 size={14} /> Уд.
+        </button>
       </div>
     </div>
   );
@@ -874,8 +933,12 @@ export const AdminPanel = () => {
       </div>
       <p className="text-xs text-slate-500 mb-2">{item.author_name} • {new Date(item.created_at).toLocaleDateString('ru-RU')}</p>
       <div className="flex gap-2 justify-end">
-        <button onClick={() => openNewsModal(item)} className="text-blue-600 text-sm">Ред.</button>
-        <button onClick={() => handleDeleteNews(item.id)} className="text-red-600 text-sm">Уд.</button>
+        <button onClick={() => openNewsModal(item)} className="text-blue-600 text-sm flex items-center gap-1">
+          <Edit3 size={14} /> Ред.
+        </button>
+        <button onClick={() => handleDeleteNews(item.id)} className="text-red-600 text-sm flex items-center gap-1">
+          <Trash2 size={14} /> Уд.
+        </button>
       </div>
     </div>
   );
@@ -883,11 +946,16 @@ export const AdminPanel = () => {
   const MobileFileCard = ({ file }: { file: any }) => (
     <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border border-slate-200 dark:border-slate-700">
       <div className="flex justify-between items-start mb-2">
-        <span className="font-medium text-slate-800 dark:text-white break-words flex-1">{file.name}</span>
+        <div className="flex items-center gap-2">
+          <FileText size={20} className="text-slate-500" />
+          <span className="font-medium text-slate-800 dark:text-white break-words flex-1">{file.name}</span>
+        </div>
         <span className="text-xs text-slate-400">{formatFileSize(file.size)}</span>
       </div>
-      <div className="flex gap-2 justify-end">
-        <button onClick={() => handleDeleteFile(file.name)} className="text-red-600 text-sm">Удалить</button>
+      <div className="flex gap-2 justify-end mt-2">
+        <button onClick={() => handleDeleteFile(file.name)} className="text-red-600 text-sm flex items-center gap-1">
+          <Trash2 size={14} /> Удалить
+        </button>
       </div>
     </div>
   );
@@ -897,14 +965,14 @@ export const AdminPanel = () => {
       <div className="flex flex-col gap-2 mb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2 flex-wrap">
-            <span className={`px-2 py-0.5 text-xs rounded-full ${item.type === 'bug' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : item.type === 'feature' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
-              {getFeedbackTypeLabel(item.type)}
+            <span className={`px-2 py-0.5 text-xs rounded-full flex items-center gap-1 ${item.type === 'bug' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : item.type === 'feature' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+              {getFeedbackTypeIcon(item.type)} {getFeedbackTypeLabel(item.type)}
             </span>
-            <span className={`px-2 py-0.5 text-xs rounded-full ${item.status === 'new' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : item.status === 'in_progress' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'}`}>
-              {getFeedbackStatusLabel(item.status)}
+            <span className={`px-2 py-0.5 text-xs rounded-full flex items-center gap-1 ${item.status === 'new' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : item.status === 'in_progress' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+              {getFeedbackStatusIcon(item.status)} {getFeedbackStatusLabel(item.status)}
             </span>
           </div>
-          <div className="text-xs text-slate-400 dark:text-slate-500">{new Date(item.created_at).toLocaleString('ru-RU')}</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500">{formatFeedbackDate(item.created_at)}</div>
         </div>
         <div className="text-xs text-slate-400 dark:text-slate-500">От: {item.user_name} ({item.user_email})</div>
       </div>
@@ -926,8 +994,12 @@ export const AdminPanel = () => {
           <option value="in_progress">В работе</option>
           <option value="completed">Завершено</option>
         </select>
-        <button onClick={() => openCommentModal(item)} className="text-sm px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 transition">Комментарий</button>
-        <button onClick={() => deleteFeedback(item.id)} className="text-sm px-3 py-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 transition">Удалить</button>
+        <button onClick={() => openCommentModal(item)} className="text-sm px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 transition flex items-center gap-1">
+          <MessageSquare size={14} /> Комментарий
+        </button>
+        <button onClick={() => deleteFeedback(item.id)} className="text-sm px-3 py-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 transition flex items-center gap-1">
+          <Trash2 size={14} /> Удалить
+        </button>
       </div>
     </div>
   );
@@ -942,21 +1014,35 @@ export const AdminPanel = () => {
 
       <div className="overflow-x-auto pb-2">
         <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 min-w-max">
-          <button onClick={() => setActiveTab('users')} className={`px-4 py-2 font-medium transition ${activeTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>Пользователи</button>
-          <button onClick={() => setActiveTab('sections')} className={`px-4 py-2 font-medium transition ${activeTab === 'sections' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>Разделы</button>
-          <button onClick={() => setActiveTab('tests')} className={`px-4 py-2 font-medium transition ${activeTab === 'tests' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>Тесты</button>
-          <button onClick={() => setActiveTab('checklists')} className={`px-4 py-2 font-medium transition ${activeTab === 'checklists' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>Чек-листы</button>
-          <button onClick={() => setActiveTab('news')} className={`px-4 py-2 font-medium transition ${activeTab === 'news' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>Новости</button>
-          <button onClick={() => setActiveTab('files')} className={`px-4 py-2 font-medium transition ${activeTab === 'files' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>Файлы</button>
-          <button onClick={() => setActiveTab('feedback')} className={`px-4 py-2 font-medium transition ${activeTab === 'feedback' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>Фидбэк</button>
+          <button onClick={() => setActiveTab('users')} className={`px-4 py-2 font-medium transition flex items-center gap-2 ${activeTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>
+            <Users size={16} /> Пользователи
+          </button>
+          <button onClick={() => setActiveTab('sections')} className={`px-4 py-2 font-medium transition flex items-center gap-2 ${activeTab === 'sections' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>
+            <BookOpen size={16} /> Разделы
+          </button>
+          <button onClick={() => setActiveTab('tests')} className={`px-4 py-2 font-medium transition flex items-center gap-2 ${activeTab === 'tests' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>
+            <ClipboardList size={16} /> Тесты
+          </button>
+          <button onClick={() => setActiveTab('checklists')} className={`px-4 py-2 font-medium transition flex items-center gap-2 ${activeTab === 'checklists' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>
+            <CheckCircle size={16} /> Чек-листы
+          </button>
+          <button onClick={() => setActiveTab('news')} className={`px-4 py-2 font-medium transition flex items-center gap-2 ${activeTab === 'news' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>
+            <Newspaper size={16} /> Новости
+          </button>
+          <button onClick={() => setActiveTab('files')} className={`px-4 py-2 font-medium transition flex items-center gap-2 ${activeTab === 'files' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>
+            <FolderOpen size={16} /> Файлы
+          </button>
+          <button onClick={() => setActiveTab('feedback')} className={`px-4 py-2 font-medium transition flex items-center gap-2 ${activeTab === 'feedback' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 dark:text-slate-400'}`}>
+            <MessageSquare size={16} /> Фидбэк
+          </button>
         </div>
       </div>
 
       {activeTab === 'sections' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => { setEditingSection(null); setFormTitle(''); setFormContent(''); setFormPhotos([]); setShowModal(true); }} className="btn-primary">
-              + Добавить раздел
+            <button onClick={() => { setEditingSection(null); setFormTitle(''); setFormContent(''); setFormPhotos([]); setShowModal(true); }} className="btn-primary flex items-center gap-2">
+              <Plus size={16} /> Добавить раздел
             </button>
           </div>
           {loading ? (
@@ -994,7 +1080,9 @@ export const AdminPanel = () => {
       {activeTab === 'users' && (
         <div className="space-y-6">
           <div className="card p-6">
-            <h3 className="font-semibold text-slate-800 dark:text-white mb-4">Добавить пользователя</h3>
+            <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <Users size={18} /> Добавить пользователя
+            </h3>
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1021,7 +1109,9 @@ export const AdminPanel = () => {
                   <option value="admin">Администратор</option>
                 </select>
               </div>
-              <button type="submit" className="btn-secondary">Создать пользователя</button>
+              <button type="submit" className="btn-secondary flex items-center gap-2">
+                <Plus size={16} /> Создать пользователя
+              </button>
             </form>
           </div>
           {loading ? (
@@ -1052,7 +1142,9 @@ export const AdminPanel = () => {
                         </span>
                       </td>
                       <td className="table-cell">
-                        <button onClick={() => handleDeleteUser(user.id, user.role)} className="text-red-600">Удалить</button>
+                        <button onClick={() => handleDeleteUser(user.id, user.role)} className="text-red-600 flex items-center gap-1">
+                          <Trash2 size={14} /> Удалить
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1066,8 +1158,8 @@ export const AdminPanel = () => {
       {activeTab === 'tests' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => { resetTestForm(); setShowTestModal(true); }} className="btn-primary">
-              + Создать тест
+            <button onClick={() => { resetTestForm(); setShowTestModal(true); }} className="btn-primary flex items-center gap-2">
+              <Plus size={16} /> Создать тест
             </button>
           </div>
           {loading ? (
@@ -1085,8 +1177,12 @@ export const AdminPanel = () => {
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="font-semibold text-lg">{test.title}</h3>
                     <div className="flex gap-2">
-                      <button onClick={() => openEditTestModal(test.id)} className="text-blue-600">✎</button>
-                      <button onClick={() => handleDeleteTest(test.id)} className="text-red-600">✕</button>
+                      <button onClick={() => openEditTestModal(test.id)} className="text-blue-600">
+                        <Edit3 size={16} />
+                      </button>
+                      <button onClick={() => handleDeleteTest(test.id)} className="text-red-600">
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                   {test.description && <p className="text-sm text-slate-500 mb-3">{test.description}</p>}
@@ -1094,7 +1190,9 @@ export const AdminPanel = () => {
                     <span className="text-slate-500">📘 {test.questions_count} вопросов</span>
                     {test.section_id && <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">Раздел {test.section_id}</span>}
                   </div>
-                  <button onClick={() => openEditTestModal(test.id)} className="mt-3 w-full btn-outline text-sm py-2">Редактировать вопросы</button>
+                  <button onClick={() => openEditTestModal(test.id)} className="mt-3 w-full btn-outline text-sm py-2 flex items-center justify-center gap-2">
+                    <Edit3 size={14} /> Редактировать вопросы
+                  </button>
                 </div>
               ))}
             </div>
@@ -1104,8 +1202,10 @@ export const AdminPanel = () => {
 
       {activeTab === 'checklists' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between gap-3">
-            <button onClick={() => openTaskModal()} className="btn-primary">+ Добавить задачу</button>
+          <div className="flex justify-end">
+            <button onClick={() => openTaskModal()} className="btn-primary flex items-center gap-2">
+              <Plus size={16} /> Добавить задачу
+            </button>
           </div>
           {loading ? (
             <div className="text-center py-12">Загрузка...</div>
@@ -1141,8 +1241,12 @@ export const AdminPanel = () => {
                       <td className="table-cell">{task.task_text}</td>
                       <td className="table-cell text-xs text-slate-500 max-w-xs truncate">{task.hint || '—'}</td>
                       <td className="table-cell space-x-3">
-                        <button onClick={() => openTaskModal(task)} className="text-blue-600">Ред.</button>
-                        <button onClick={() => handleDeleteTask(task.id)} className="text-red-600">Уд.</button>
+                        <button onClick={() => openTaskModal(task)} className="text-blue-600">
+                          <Edit3 size={16} />
+                        </button>
+                        <button onClick={() => handleDeleteTask(task.id)} className="text-red-600">
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1156,7 +1260,9 @@ export const AdminPanel = () => {
       {activeTab === 'news' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => openNewsModal()} className="btn-primary">+ Создать новость</button>
+            <button onClick={() => openNewsModal()} className="btn-primary flex items-center gap-2">
+              <Plus size={16} /> Создать новость
+            </button>
           </div>
           {loading ? (
             <div className="text-center py-12">Загрузка...</div>
@@ -1192,8 +1298,12 @@ export const AdminPanel = () => {
                       </td>
                       <td className="table-cell">{new Date(item.created_at).toLocaleDateString('ru-RU')}</td>
                       <td className="table-cell space-x-3">
-                        <button onClick={() => openNewsModal(item)} className="text-blue-600">Ред.</button>
-                        <button onClick={() => handleDeleteNews(item.id)} className="text-red-600">Уд.</button>
+                        <button onClick={() => openNewsModal(item)} className="text-blue-600">
+                          <Edit3 size={16} />
+                        </button>
+                        <button onClick={() => handleDeleteNews(item.id)} className="text-red-600">
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1207,10 +1317,14 @@ export const AdminPanel = () => {
       {activeTab === 'files' && (
         <div className="space-y-6">
           <div className="card p-6">
-            <h3 className="font-semibold mb-4">Загрузить файл</h3>
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <FolderOpen size={18} /> Загрузить файл
+            </h3>
             <form onSubmit={handleUploadFile} className="space-y-4">
               <input type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="w-full" required />
-              <button type="submit" className="btn-primary">Загрузить</button>
+              <button type="submit" className="btn-primary flex items-center gap-2">
+                <Plus size={16} /> Загрузить
+              </button>
             </form>
           </div>
           {loading ? (
@@ -1230,10 +1344,15 @@ export const AdminPanel = () => {
                 <tbody>
                   {files.map((file: any) => (
                     <tr key={file.name} className="table-row">
-                      <td className="table-cell font-medium">{file.name}</td>
+                      <td className="table-cell font-medium flex items-center gap-2">
+                        <FileText size={16} className="text-slate-500" />
+                        {file.name}
+                      </td>
                       <td className="table-cell">{formatFileSize(file.size)}</td>
                       <td className="table-cell">
-                        <button onClick={() => handleDeleteFile(file.name)} className="text-red-600">Удалить</button>
+                        <button onClick={() => handleDeleteFile(file.name)} className="text-red-600 flex items-center gap-1">
+                          <Trash2 size={14} /> Удалить
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1247,7 +1366,9 @@ export const AdminPanel = () => {
       {activeTab === 'feedback' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center flex-wrap gap-3">
-            <h2 className="text-xl font-semibold">Обратная связь</h2>
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <MessageSquare size={20} /> Обратная связь
+            </h2>
             <button onClick={() => loadFeedback()} className="px-3 py-1 text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition">
               Обновить
             </button>
@@ -1282,7 +1403,7 @@ export const AdminPanel = () => {
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/40 rounded-lg p-3 text-center">
                     <div className="text-2xl font-bold text-rose-700 dark:text-rose-200">{feedbackStats.by_type?.bug || 0}</div>
-                    <div className="text-xs text-rose-600 dark:text-rose-300">Бaги</div>
+                    <div className="text-xs text-rose-600 dark:text-rose-300">Баги</div>
                   </div>
                   <div className="bg-emerald-100 dark:bg-emerald-900/40 rounded-lg p-3 text-center">
                     <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-200">{feedbackStats.by_type?.feature || 0}</div>
@@ -1295,14 +1416,14 @@ export const AdminPanel = () => {
                   <div key={item.id} className={`card p-4 ${item.status === 'new' ? 'border-l-4 border-l-amber-500' : ''}`}>
                     <div className="flex justify-between flex-wrap gap-3 mb-3">
                       <div className="flex gap-2 flex-wrap">
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${item.type === 'bug' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : item.type === 'feature' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
-                          {getFeedbackTypeLabel(item.type)}
+                        <span className={`px-2 py-0.5 text-xs rounded-full flex items-center gap-1 ${item.type === 'bug' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : item.type === 'feature' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                          {getFeedbackTypeIcon(item.type)} {getFeedbackTypeLabel(item.type)}
                         </span>
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${item.status === 'new' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : item.status === 'in_progress' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
-                          {getFeedbackStatusLabel(item.status)}
+                        <span className={`px-2 py-0.5 text-xs rounded-full flex items-center gap-1 ${item.status === 'new' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : item.status === 'in_progress' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                          {getFeedbackStatusIcon(item.status)} {getFeedbackStatusLabel(item.status)}
                         </span>
                       </div>
-                      <div className="text-xs text-slate-400">{new Date(item.created_at).toLocaleString('ru-RU')}</div>
+                      <div className="text-xs text-slate-400">{formatFeedbackDate(item.created_at)}</div>
                     </div>
                     <h3 className="font-semibold text-slate-800 dark:text-white mb-2">{item.subject}</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{item.message}</p>
@@ -1318,8 +1439,12 @@ export const AdminPanel = () => {
                         <option value="in_progress">В работе</option>
                         <option value="completed">Завершено</option>
                       </select>
-                      <button onClick={() => openCommentModal(item)} className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 transition">Комментарий</button>
-                      <button onClick={() => deleteFeedback(item.id)} className="text-sm px-3 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 transition">Удалить</button>
+                      <button onClick={() => openCommentModal(item)} className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 transition flex items-center gap-1">
+                        <MessageSquare size={14} /> Комментарий
+                      </button>
+                      <button onClick={() => deleteFeedback(item.id)} className="text-sm px-3 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 transition flex items-center gap-1">
+                        <Trash2 size={14} /> Удалить
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1336,7 +1461,9 @@ export const AdminPanel = () => {
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto z-[1000000]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">{editingTest ? 'Редактировать тест' : 'Создать тест'}</h2>
-              <button onClick={() => setShowTestModal(false)} className="text-slate-400">✕</button>
+              <button onClick={() => setShowTestModal(false)} className="text-slate-400">
+                <X size={20} />
+              </button>
             </div>
             <form onSubmit={editingTest ? handleUpdateTest : handleCreateTest} className="space-y-4">
               <div>
@@ -1360,7 +1487,9 @@ export const AdminPanel = () => {
               <div className="mt-8 pt-6 border-t">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">Вопросы</h3>
-                  <button type="button" onClick={addQuestionToForm} className="text-sm text-blue-600">+ Добавить вопрос</button>
+                  <button type="button" onClick={addQuestionToForm} className="text-sm text-blue-600 flex items-center gap-1">
+                    <Plus size={14} /> Добавить вопрос
+                  </button>
                 </div>
                 <div className="space-y-4 max-h-[400px] overflow-y-auto">
                   {testQuestions.length === 0 ? (
@@ -1370,7 +1499,9 @@ export const AdminPanel = () => {
                       <div key={idx} className="border rounded-lg p-4 space-y-3">
                         <div className="flex justify-between">
                           <h4 className="font-medium">Вопрос {idx+1}</h4>
-                          <button type="button" onClick={() => removeQuestionFromForm(idx)} className="text-red-500 text-sm">Удалить</button>
+                          <button type="button" onClick={() => removeQuestionFromForm(idx)} className="text-red-500 text-sm flex items-center gap-1">
+                            <Trash2 size={14} /> Удалить
+                          </button>
                         </div>
                         <input type="text" placeholder="Текст вопроса" value={q.question} onChange={(e) => updateQuestionInForm(idx, 'question', e.target.value)} className="form-input" />
                         <input type="text" placeholder="Вариант 1" value={q.option1} onChange={(e) => updateQuestionInForm(idx, 'option1', e.target.value)} className="form-input" />
@@ -1400,7 +1531,9 @@ export const AdminPanel = () => {
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto z-[1000000]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">{editingSection ? 'Редактировать раздел' : 'Новый раздел'}</h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400">✕</button>
+              <button onClick={() => setShowModal(false)} className="text-slate-400">
+                <X size={20} />
+              </button>
             </div>
             <form onSubmit={handleSubmitSection} className="space-y-4">
               <input type="text" placeholder="Название" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} className="form-input" required />
@@ -1423,7 +1556,9 @@ export const AdminPanel = () => {
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto z-[1000000]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Фото: {selectedSection.title}</h2>
-              <button onClick={() => setShowPhotoModal(false)} className="text-slate-400">✕</button>
+              <button onClick={() => setShowPhotoModal(false)} className="text-slate-400">
+                <X size={20} />
+              </button>
             </div>
             <div className="mb-6">
               <h3 className="font-medium mb-3">Текущие фото ({sectionPhotos.length}/7)</h3>
@@ -1431,7 +1566,9 @@ export const AdminPanel = () => {
                 {sectionPhotos.map((photo: any) => (
                   <div key={photo.slot} className="relative group">
                     <img src={`/assets/${photo.url}`} className="w-full h-32 object-cover rounded-lg" />
-                    <button onClick={() => handleDeletePhoto(photo.slot)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100">✕</button>
+                    <button onClick={() => handleDeletePhoto(photo.slot)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100">
+                      <X size={12} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -1452,7 +1589,9 @@ export const AdminPanel = () => {
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto z-[1000000]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">{editingTask ? 'Редактировать задачу' : 'Новая задача'}</h2>
-              <button onClick={() => setShowChecklistModal(false)} className="text-slate-400">✕</button>
+              <button onClick={() => setShowChecklistModal(false)} className="text-slate-400">
+                <X size={20} />
+              </button>
             </div>
             <form onSubmit={handleSubmitTask} className="space-y-4">
               <div>
@@ -1489,7 +1628,9 @@ export const AdminPanel = () => {
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 rounded-xl p-6 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto z-[1000000]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">{editingNews ? 'Редактировать новость' : 'Новая новость'}</h2>
-              <button onClick={() => setShowNewsModal(false)} className="text-slate-400">✕</button>
+              <button onClick={() => setShowNewsModal(false)} className="text-slate-400">
+                <X size={20} />
+              </button>
             </div>
             <form onSubmit={handleSubmitNews} className="space-y-4">
               <input type="text" placeholder="Заголовок" value={newsTitle} onChange={(e) => setNewsTitle(e.target.value)} className="form-input" required />

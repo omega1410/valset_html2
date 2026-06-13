@@ -136,7 +136,6 @@ async def create_log_entry(
 
     return dict(new_entry)
 
-
 @router.put("/{entry_id}")
 async def update_log_entry(
     entry_id: int, 
@@ -152,11 +151,9 @@ async def update_log_entry(
         if not entry:
             raise HTTPException(404, "Запись не найдена")
         
-        # Нельзя редактировать удалённые записи
         if entry["is_deleted"]:
             raise HTTPException(400, "Нельзя редактировать удалённую запись")
 
-        # Нельзя редактировать выполненные задачи
         if entry["status"] == "completed":
             raise HTTPException(400, "Нельзя редактировать выполненную задачу")
 
@@ -172,17 +169,14 @@ async def update_log_entry(
         if entry_update.assignee is not None:
             updates.append("assignee = ?")
             values.append(entry_update.assignee)
-        if entry_update.comment is not None:
-            updates.append("comment = ?")
-            values.append(entry_update.comment)
+        if entry_update.is_important is not None:
+            updates.append("is_important = ?")
+            values.append(entry_update.is_important)
         if entry_update.status is not None:
             updates.append("status = ?")
             values.append(entry_update.status)
             if entry_update.status == "completed":
                 updates.append("completed_at = CURRENT_TIMESTAMP")
-        if entry_update.is_important is not None:
-            updates.append("is_important = ?")
-            values.append(entry_update.is_important)
 
         if updates:
             updates.append("updated_at = CURRENT_TIMESTAMP")
@@ -191,9 +185,16 @@ async def update_log_entry(
                 f"UPDATE logbook SET {', '.join(updates)} WHERE id = ?", 
                 values
             )
+        
+        # Принудительно обновляем comment отдельным запросом (даже если он None)
+        # Это гарантирует, что поле comment очистится при отправке null или пустой строки
+        comment_value = None if entry_update.comment == '' or entry_update.comment is None else entry_update.comment
+        cursor.execute(
+            "UPDATE logbook SET comment = ? WHERE id = ?",
+            (comment_value, entry_id)
+        )
 
     return {"message": "Запись обновлена"}
-
 
 @router.delete("/{entry_id}")
 async def delete_log_entry(entry_id: int, user: dict = Depends(get_current_user)):

@@ -37,9 +37,18 @@ export const MobileLogbookCard = ({
 
   const getStatusBadge = (status: string) => {
     if (status === 'completed') {
-      return <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">✓ Выполнено</span>;
+      return (
+        <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 transition-all duration-300">
+          ✓ Выполнено
+        </span>
+      );
     }
-    return <span className="px-2 py-1 text-xs rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700">⟳ В работе</span>;
+    return (
+      <span className="px-2 py-1 text-xs rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 transition-all duration-300 flex items-center gap-1">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse-status"></span>
+        В работе
+      </span>
+    );
   };
 
   return (
@@ -48,9 +57,6 @@ export const MobileLogbookCard = ({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-slate-400">№{entry.id}</span>
           {getStatusBadge(entry.status)}
-          {entry.is_important === true && (
-            <span className="text-amber-500 text-sm">⭐</span>
-          )}
         </div>
         <span className="text-xs text-slate-400">{formatDate(entry.created_at)}</span>
       </div>

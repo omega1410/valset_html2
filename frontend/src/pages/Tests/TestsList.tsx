@@ -72,15 +72,16 @@ export const TestsList = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {currentTests.map((test: any) => {
+          {currentTests.map((test: any, index: number) => {
             const testUrl = activeTab === 'extended' ? `/tests/${test.id}/paged` : `/tests/${test.id}`;
             return (
-              <Link 
-                key={test.id} 
-                to={testUrl}
-                state={{ title: test.title }}
-                className="card p-5 hover:shadow-md transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 block group hover:-translate-y-1"
-              >
+               <Link 
+                 key={test.id} 
+                 to={testUrl}
+                 state={{ title: test.title }}
+                 className="rounded-xl bg-white dark:bg-slate-800 p-5 shadow-md hover:shadow-xl border border-slate-200 dark:border-slate-700 block transition-all duration-300 group hover:-translate-y-1 stagger-fade"
+                 style={{ animationDelay: `${index * 0.08}s` }}
+               >  
                 <h3 className="font-semibold text-slate-800 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
                   {test.title}
                 </h3>

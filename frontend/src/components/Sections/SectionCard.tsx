@@ -6,9 +6,10 @@ interface SectionCardProps {
     title: string;
     content: string;
   };
+  index: number;
 }
 
-export const SectionCard = ({ section }: SectionCardProps) => {
+export const SectionCard = ({ section, index }: SectionCardProps) => {
   const previewContent = section.content.length > 120 
     ? section.content.substring(0, 120) + '...' 
     : section.content;
@@ -17,7 +18,8 @@ export const SectionCard = ({ section }: SectionCardProps) => {
     <Link
       to={`/sections/${section.id}`}
       state={{ title: section.title }}
-      className="card p-5 hover:shadow-md transition hover:border-slate-300 dark:hover:border-slate-600 block group"
+      className="rounded-xl bg-white dark:bg-slate-800 p-5 shadow-md hover:shadow-xl border border-slate-200 dark:border-slate-700 block transition-all duration-300 group hover:-translate-y-1 stagger-fade"
+      style={{ animationDelay: `${index * 0.08}s` }}
     >
       <h3 className="font-semibold text-slate-800 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
         {section.title}

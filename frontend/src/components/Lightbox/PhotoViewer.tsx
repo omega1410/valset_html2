@@ -121,21 +121,24 @@ export const PhotoViewer = ({ photos, initialIndex, onClose }: PhotoViewerProps)
               left: 20,
               top: '50%',
               transform: 'translateY(-50%)',
-              color: 'white',
-              fontSize: 40,
               background: 'rgba(0,0,0,0.5)',
               border: 'none',
               borderRadius: '50%',
-              width: 50,
-              height: 50,
+              width: 48,
+              height: 48,
               cursor: 'pointer',
               zIndex: 1000000,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              padding: 0
             }}
           >
-            ←
+            <img 
+              src="/assets/lightbox/arrow-left.svg" 
+              alt="Previous" 
+              style={{ width: 24, height: 24 }}
+            />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
@@ -144,21 +147,24 @@ export const PhotoViewer = ({ photos, initialIndex, onClose }: PhotoViewerProps)
               right: 20,
               top: '50%',
               transform: 'translateY(-50%)',
-              color: 'white',
-              fontSize: 40,
               background: 'rgba(0,0,0,0.5)',
               border: 'none',
               borderRadius: '50%',
-              width: 50,
-              height: 50,
+              width: 48,
+              height: 48,
               cursor: 'pointer',
               zIndex: 1000000,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              padding: 0
             }}
           >
-            →
+            <img 
+              src="/assets/lightbox/arrow-right.svg" 
+              alt="Next" 
+              style={{ width: 24, height: 24 }}
+            />
           </button>
         </>
       )}

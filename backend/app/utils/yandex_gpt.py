@@ -20,17 +20,26 @@ CHUNK_SIZE = 1000
 TOP_K = 5
 
 
-def call_yandex_gpt(prompt: str) -> str:
-    """Вызов Yandex GPT API"""
+def call_yandex_gpt(messages: List[Dict[str, str]]) -> str:
+    """Вызов Yandex GPT API с поддержкой истории сообщений"""
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Api-Key {API_KEY}",
     }
+    
+    # Форматируем сообщения для Yandex GPT
+    formatted_messages = []
+    for msg in messages:
+        formatted_messages.append({
+            "role": msg["role"],
+            "text": msg["content"]
+        })
+    
     payload = {
         "modelUri": CHAT_MODEL_URI,
         "completionOptions": {"stream": False, "temperature": 0.3, "maxTokens": 2000},
-        "messages": [{"role": "user", "text": prompt}],
+        "messages": formatted_messages,
     }
 
     try:
@@ -94,7 +103,6 @@ def search_similar(query: str, sections: List[Dict[str, Any]]) -> List[str]:
 
     results = []
     for section in sections:
-        # Разбиваем на чанки
         chunks = chunk_text(section["content"], section["title"])
 
         for chunk in chunks:
@@ -108,25 +116,32 @@ def search_similar(query: str, sections: List[Dict[str, Any]]) -> List[str]:
     return [text for _, text in results[:TOP_K]]
 
 
-def generate_rag_answer(question: str) -> str:
-    """Генерация ответа на основе БД (RAG)"""
-    # Загружаем разделы
+def generate_rag_answer(question: str, history: List[Dict[str, str]] = None) -> str:
+    """Генерация ответа на основе БД (RAG) с учётом истории"""
     sections = load_sections()
 
     if not sections:
         return "База знаний пуста. Добавьте разделы через админ-панель."
 
-    # Ищем похожие фрагменты
     similar_chunks = search_similar(question, sections)
 
     if not similar_chunks:
         return "Не могу найти информацию по вашему вопросу в базе знаний."
 
     context = "\n\n".join(similar_chunks)
+    
+    # Формируем историю для контекста
+    history_text = ""
+    if history and len(history) > 0:
+        history_text = "\n\nПредыдущие сообщения:\n"
+        for msg in history:
+            role = "Пользователь" if msg["role"] == "user" else "Ассистент"
+            history_text += f"{role}: {msg['content']}\n"
+        history_text += "\n"
 
     prompt = f"""Ты - AI-ассистент отеля. Отвечай на вопросы ТОЛЬКО на основе предоставленного контекста.
 Если ответа нет в контексте - скажи "Информация не найдена в базе знаний".
-
+{history_text}
 Контекст из базы знаний отеля:
 {context}
 
@@ -134,17 +149,28 @@ def generate_rag_answer(question: str) -> str:
 
 Ответ:"""
 
-    return call_yandex_gpt(prompt)
+    messages = [{"role": "user", "content": prompt}]
+    return call_yandex_gpt(messages)
 
 
-def generate_free_answer(question: str) -> str:
-    """Свободный ответ AI (без ограничений БД)"""
+def generate_free_answer(question: str, history: List[Dict[str, str]] = None) -> str:
+    """Свободный ответ AI (без ограничений БД) с учётом истории"""
+    # Формируем историю для контекста
+    history_text = ""
+    if history and len(history) > 0:
+        history_text = "\n\nПредыдущие сообщения:\n"
+        for msg in history:
+            role = "Пользователь" if msg["role"] == "user" else "Ассистент"
+            history_text += f"{role}: {msg['content']}\n"
+        history_text += "\n"
+
     prompt = f"""Ты - полезный AI-ассистент для сотрудников отеля.
 Отвечай на вопросы максимально полезно и информативно.
 Будь вежливым и профессиональным.
-
+{history_text}
 Вопрос пользователя: {question}
 
 Ответ:"""
 
-    return call_yandex_gpt(prompt)
+    messages = [{"role": "user", "content": prompt}]
+    return call_yandex_gpt(messages)

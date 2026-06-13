@@ -19,3 +19,6 @@ build/
 .vscode/
 .idea/data.db
 *.db
+*.backup*
+/root/backups/
+data.db.backup*

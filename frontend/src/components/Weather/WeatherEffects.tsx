@@ -14,23 +14,46 @@ export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffects
       return;
     }
 
-    // Солнце - справа по центру, чуть выше
+    const hour = new Date().getHours();
+    const isNight = hour < 6 || hour >= 20;
+
+    // Солнце или луна
     if (weatherMain === 'Clear') {
-      setEffects([
-        <div
-          key="sun"
-          className="absolute rounded-full blur-xl sun-pulse"
-          style={{ 
-            top: '15%',
-            right: '5%',
-            width: '140px',
-            height: '140px',
-            zIndex: 1,
-            background: 'radial-gradient(circle, rgba(255,220,80,0.9), rgba(255,120,50,0.5))',
-            boxShadow: '0 0 50px rgba(255,200,50,0.5)',
-          }}
-        />,
-      ]);
+      if (isNight) {
+        // Луна (серебристо-серая для ночи)
+        setEffects([
+          <div
+            key="moon"
+            className="absolute rounded-full blur-xl moon-pulse"
+            style={{ 
+              top: '15%',
+              right: '5%',
+              width: '120px',
+              height: '120px',
+              zIndex: 1,
+              background: 'radial-gradient(circle, rgba(200,210,220,0.7), rgba(150,160,170,0.4))',
+              boxShadow: '0 0 40px rgba(180,190,200,0.4)',
+            }}
+          />,
+        ]);
+      } else {
+        // Солнце
+        setEffects([
+          <div
+            key="sun"
+            className="absolute rounded-full blur-xl sun-pulse"
+            style={{ 
+              top: '15%',
+              right: '5%',
+              width: '140px',
+              height: '140px',
+              zIndex: 1,
+              background: 'radial-gradient(circle, rgba(255,220,80,0.9), rgba(255,120,50,0.5))',
+              boxShadow: '0 0 50px rgba(255,200,50,0.5)',
+            }}
+          />,
+        ]);
+      }
     }
     // Облака
     else if (weatherMain === 'Clouds') {
@@ -63,7 +86,7 @@ export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffects
         ))
       );
     }
-    // Дождь - начинаем за пределами баннера
+    // Дождь
     else if (weatherMain === 'Rain' || weatherMain === 'Drizzle') {
       const drops = [];
       for (let i = 0; i < 100; i++) {
@@ -85,7 +108,7 @@ export const WeatherEffects = ({ weatherMain, isVisible = true }: WeatherEffects
       }
       setEffects(drops);
     }
-    // Снег - начинаем за пределами баннера
+    // Снег
     else if (weatherMain === 'Snow') {
       const flakes = [];
       for (let i = 0; i < 80; i++) {

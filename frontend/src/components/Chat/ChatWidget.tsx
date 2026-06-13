@@ -40,23 +40,42 @@ export const ChatWidget = () => {
     }
   }, [isOpen]);
 
+  // Управление скроллбаром при открытии/закрытии чата
+  useEffect(() => {
+    if (isOpen) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, [isOpen]);
+
+  // Закрытие при клике вне модального окна (только на десктопе)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        const target = event.target as HTMLElement;
+        if (!target.closest('.chat-toggle-button')) {
+          setIsOpen(false);
+        }
       }
     };
 
-    if (isOpen) {
+    if (isOpen && !isMobile) {
       document.addEventListener('mousedown', handleClickOutside);
-      document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -82,13 +101,20 @@ export const ChatWidget = () => {
   };
 
   const clearHistory = async () => {
-    try {
-      await aiService.clearHistory();
-      setMessages([{ role: 'assistant', content: 'История чата очищена. Задавайте вопросы!' }]);
-      toast.success('История очищена');
-    } catch (error) {
-      toast.error('Ошибка очистки');
+    if (confirm('Вы уверены, что хотите очистить всю историю чата? Это действие нельзя отменить.')) {
+      try {
+        await aiService.clearHistory();
+        setMessages([{ role: 'assistant', content: 'История чата очищена. Задавайте вопросы!' }]);
+        toast.success('История чата очищена');
+      } catch (error) {
+        toast.error('Ошибка очистки');
+      }
     }
+  };
+
+  const toggleChat = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setIsOpen(!isOpen);
   };
 
   if (!isAuthenticated) return null;
@@ -97,19 +123,23 @@ export const ChatWidget = () => {
 
   return (
     <>
+      {/* Кнопка чата - всегда поверх всего */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center gap-2 px-4 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-200 text-white"
-        style={{ height: '48px' }}
+        onClick={toggleChat}
+        className="chat-toggle-button flex items-center justify-center gap-2 px-4 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-200 text-white"
+        style={{ height: '48px', position: 'relative', zIndex: 100 }}
         title="Чат с GPT"
       >
-        <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
+        <img 
+          src="/assets/chat/bot.svg" 
+          alt="Bot" 
+          className="w-5 h-5"
+        />
         <span className="text-sm font-medium whitespace-nowrap hidden sm:inline">Assistant GPT</span>
         <span className="text-sm font-medium whitespace-nowrap sm:hidden">GPT</span>
       </button>
 
+      {/* Модальное окно чата */}
       {isOpen && (
         <>
           {/* Затемнение фона для мобилок */}
@@ -141,12 +171,20 @@ export const ChatWidget = () => {
                   >
                     {mode === 'rag' ? 'По БД' : 'Свободный'}
                   </button>
-                  <button onClick={clearHistory} className="text-white/70 hover:text-white">
+                  <button 
+                    onClick={clearHistory} 
+                    className="text-white/70 hover:text-white transition"
+                    title="Очистить историю"
+                  >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
-                  <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white">
+                  <button 
+                    onClick={() => setIsOpen(false)} 
+                    className="text-white/70 hover:text-white transition"
+                    title="Закрыть"
+                  >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>

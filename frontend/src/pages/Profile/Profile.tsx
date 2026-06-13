@@ -270,6 +270,19 @@ export const Profile = () => {
             className="form-input bg-slate-50 dark:bg-slate-700/50 cursor-not-allowed"
           />
         </div>
+
+        {/* Кнопка помощи с паролем */}
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-2">
+          <button
+            onClick={() => window.open('https://t.me/resetpassvalset_bot', '_blank')}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition text-sm"
+          >
+            Забыли пароль? Обратиться к боту
+          </button>
+          <p className="text-xs text-slate-400 text-center mt-3">
+            Напишите @resetpassvalset_bot, и он поможет восстановить доступ
+          </p>
+        </div>
       </div>
     </div>
   );
